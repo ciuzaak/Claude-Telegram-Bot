@@ -1,0 +1,5 @@
+telegram:
+  token: 'TELEGRAM BOT TOKEN'
+  username: 'TELEGRAM USER ID'
+claude:
+  api: 'CLAUDE SECRET KEY'
