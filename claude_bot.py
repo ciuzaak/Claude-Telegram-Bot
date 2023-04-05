@@ -301,14 +301,13 @@ async def reboot(update: Update, context):
 
 async def post_init(application: Application):
     await application.bot.set_my_commands([
-        BotCommand('/id', 'id'),
-        BotCommand('/start', 'start'),
-        BotCommand('/help', 'help'),
-        BotCommand('/reset', 'reset'),
-        BotCommand('/grant', 'grant'),
-        BotCommand('/ban', 'ban'),
-        BotCommand('/status', 'status'),
-        BotCommand('/reboot', 'reboot'),
+        BotCommand('/reset', 'Reset the chat history'),
+        BotCommand('/id', 'Get your chat identifier'),
+        BotCommand('/help', 'Get help message'),
+        BotCommand('/grant', '(Admin) Grant fine-granted access to a user'),
+        BotCommand('/ban', '(Admin) Ban a user'),
+        BotCommand('/status', '(Admin) Report the status of the bot'),
+        BotCommand('/reboot', '(Admin) Clear all chat history'),
     ])
 
 boot_time = datetime.datetime.now()
