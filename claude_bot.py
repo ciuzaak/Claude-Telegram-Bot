@@ -192,6 +192,73 @@ async def recv_msg_stream(update: Update, context):
         await message.edit_text('Error orrurred, please try again later. Your chat history has been reset.')
 
 
+# Settings
+async def show_settings(update: Update, context):
+    if not check_should_handle(update, context):
+        return
+    if not validate_user(update):
+        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        return
+
+    chat_session = chat_context_container.get(user_identifier(update))
+    if chat_session is None:
+        chat_session = Claude(id=user_identifier(update))
+        chat_context_container[user_identifier(update)] = chat_session
+
+    current_model, current_temperature = chat_session.get_settings()
+    reply_text = f"<b>Current model:</b> {current_model}\n" + \
+                 f"<b>Current temperature:</b> {current_temperature}\n\n" + \
+                  "Command: /model to change Claude model.\n" + \
+                  "Command: /temperature to change Claude temperature.\n" + \
+                  "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>"
+
+    await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
+    
+
+async def change_model(update: Update, context):
+    if not check_should_handle(update, context):
+        return
+    if not validate_user(update):
+        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        return
+
+    chat_session = chat_context_container.get(user_identifier(update))
+    if chat_session is None:
+        chat_session = Claude(id=user_identifier(update))
+        chat_context_container[user_identifier(update)] = chat_session
+    
+    if len(context.args) != 1:
+        await update.message.reply_text('Please provide a model name!')
+        return
+    model = context.args[0].strip()
+    if not chat_session.change_model(model):
+        await update.message.reply_text("Invalid model name!")
+        return
+    await update.message.reply_text(f"✅ Model was switched to {model}.")
+    
+
+async def change_temperature(update: Update, context):
+    if not check_should_handle(update, context):
+        return
+    if not validate_user(update):
+        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        return
+
+    chat_session = chat_context_container.get(user_identifier(update))
+    if chat_session is None:
+        chat_session = Claude(id=user_identifier(update))
+        chat_context_container[user_identifier(update)] = chat_session
+    
+    if len(context.args) != 1:
+        await update.message.reply_text('Please provide a temperature value!')
+        return
+    temperature = context.args[0].strip()
+    if not chat_session.change_temperature(temperature):
+        await update.message.reply_text("Invalid temperature value!")
+        return
+    await update.message.reply_text(f"✅ Temperature was set to {temperature}.")
+
+
 async def start_bot(update: Update, context):
     if check_timestamp(update) is False:
         return
@@ -201,6 +268,7 @@ async def start_bot(update: Update, context):
         '',
         'Command: /id to get your chat identifier',
         'Command: /reset to reset the chat history',
+        'Command: /settings to show and edit Claude settings',
     ]
     if id in admin_id:
         extra = [
@@ -303,6 +371,7 @@ async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand('/reset', 'Reset the chat history'),
         BotCommand('/id', 'Get your chat identifier'),
+        BotCommand('/settings', 'Show and edit Claude settings'),
         BotCommand('/help', 'Get help message'),
         BotCommand('/grant', '(Admin) Grant fine-granted access to a user'),
         BotCommand('/ban', '(Admin) Ban a user'),
@@ -324,6 +393,9 @@ handler_list = [
     CommandHandler('ban', ban),
     CommandHandler('status', status),
     CommandHandler('reboot', reboot),
+    CommandHandler('settings', show_settings),
+    CommandHandler('model', change_model),
+    CommandHandler('temperature', change_temperature),
     # MessageHandler(None, recv_msg),
     MessageHandler(None, recv_msg_stream),
 ]
