@@ -2,28 +2,30 @@
 
 Welcome to the Claude Telegram Bot repository!
 
-This bot is intended as a starting point for creating your own customized Telegram chatbot. 
+This bot is intended as a starting point for creating your own customized Telegram chatbot.
+
+<img src="demo/demo.gif" alt="DEMO" width="288" style="display: block; margin: 0 auto;">
 
 ## Installation
 
 1. Fill out the necessary information in `config.yml` file.
 2. Run the following command in Terminal to create the virtual environment:
 
-```
-bash setup.sh
-```
+    ```bash
+    bash setup.sh
+    ```
 
 3. To start running the bot, use the following command:
 
-```
-bash run.sh
-```
+    ```bash
+    bash run.sh
+    ```
 
 4. To stop the bot, use the following command:
 
-```
-bash kill.sh
-```
+    ```bash
+    bash kill.sh
+    ```
 
 ## Acknowledgements
 

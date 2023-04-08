@@ -208,12 +208,12 @@ async def show_settings(update: Update, context):
     current_model, current_temperature = chat_session.get_settings()
     reply_text = f"<b>Current model:</b> {current_model}\n" + \
                  f"<b>Current temperature:</b> {current_temperature}\n\n" + \
-                  "Command: /model to change Claude model.\n" + \
-                  "Command: /temperature to change Claude temperature.\n" + \
-                  "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>"
+        "Command: /model to change Claude model.\n" + \
+        "Command: /temperature to change Claude temperature.\n" + \
+        "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>"
 
     await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
-    
+
 
 async def change_model(update: Update, context):
     if not check_should_handle(update, context):
@@ -226,7 +226,7 @@ async def change_model(update: Update, context):
     if chat_session is None:
         chat_session = Claude(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
-    
+
     if len(context.args) != 1:
         await update.message.reply_text('Please provide a model name!')
         return
@@ -235,7 +235,7 @@ async def change_model(update: Update, context):
         await update.message.reply_text("Invalid model name!")
         return
     await update.message.reply_text(f"✅ Model was switched to {model}.")
-    
+
 
 async def change_temperature(update: Update, context):
     if not check_should_handle(update, context):
@@ -248,7 +248,7 @@ async def change_temperature(update: Update, context):
     if chat_session is None:
         chat_session = Claude(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
-    
+
     if len(context.args) != 1:
         await update.message.reply_text('Please provide a temperature value!')
         return
