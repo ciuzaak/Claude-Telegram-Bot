@@ -4,7 +4,9 @@ Welcome to the Claude Telegram Bot repository!
 
 This bot is intended as a starting point for creating your own customized Telegram chatbot.
 
-<img src="demo/demo.gif" alt="DEMO" width="288" style="display: block; margin: 0 auto;">
+<p align="center">
+    <img src="demo/demo.gif" alt="demo" width="288">
+</p>
 
 ## Installation
 
