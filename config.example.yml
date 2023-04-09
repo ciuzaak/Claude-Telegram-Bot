@@ -3,3 +3,5 @@ telegram:
   username: 'TELEGRAM USER ID'
 claude:
   api: 'CLAUDE SECRET KEY'
+bard:
+  api: 'BARD SECRET KEY'

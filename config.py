@@ -8,3 +8,4 @@ with open("config.yml", 'r') as f:
 telegram_token = config_yaml["telegram"]["token"]
 telegram_username = config_yaml["telegram"]["username"]
 claude_api = config_yaml["claude"]["api"]
+bard_api = config_yaml["bard"]["api"]

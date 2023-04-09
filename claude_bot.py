@@ -6,6 +6,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application
 import config
 from claude_utils import Claude
+from bard_utils import Bard
 
 
 print(f"[+] welcome to chat bot")
@@ -29,6 +30,13 @@ except Exception as e:
 chat_context_container = {}
 
 print("[+] booting bot...")
+
+
+def create_session(mode='claude', id=None):
+    if mode == 'claude':
+        return Claude(id)
+    elif mode == 'bard':
+        return Bard(id)
 
 
 def validate_user(update: Update) -> bool:
@@ -114,6 +122,7 @@ async def reset_chat(update: Update, context):
         await update.message.reply_text('Chat history is empty')
 
 
+# reply. Stream chat for claude
 async def recv_msg(update: Update, context):
     if not check_should_handle(update, context):
         return
@@ -123,7 +132,7 @@ async def recv_msg(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = Claude(user_identifier(update))
+        chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
 
     print(f"[i] {update.effective_user.username} said: {update.message.text}")
@@ -135,61 +144,41 @@ async def recv_msg(update: Update, context):
         print("[!] failed to send message")
         return
 
-    try:
-        input_text = update.message.text
-        # remove bot name from text with @
-        pattern = f"@{context.bot.username}"
-        input_text = input_text.replace(pattern, '')
-        response = chat_session.send_message(input_text)
-        print(f"[i] {update.effective_user.username} reply: {response}")
-        await message.edit_text(response)
-    except Exception as e:
-        print(f"[!] error: {e}")
-        chat_session.reset()
-        await message.edit_text('Error orrurred, please try again later. Your chat history has been reset.')
-
-
-# Stream chat in telegram
-async def recv_msg_stream(update: Update, context):
-    if not check_should_handle(update, context):
-        return
-    if not validate_user(update):
-        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
-        return
-
-    chat_session = chat_context_container.get(user_identifier(update))
-    if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
-        chat_context_container[user_identifier(update)] = chat_session
-
-    print(f"[i] {update.effective_user.username} said: {update.message.text}")
-
-    message = await update.message.reply_text(
-        '... thinking ...'
-    )
-    if message is None:
-        print("[!] failed to send message")
-        return
-
-    try:
-        input_text = update.message.text
-        # remove bot name from text with @
-        pattern = f"@{context.bot.username}"
-        input_text = input_text.replace(pattern, '')
-        # response = chat_session.chat(input_text)
-        prev_response = ""
-        for response in chat_session.send_message_stream(input_text):
-            if abs(len(response) - len(prev_response)) < 100:
-                continue
-            prev_response = response
+    current_mode = chat_session.get_mode()
+    if current_mode == 'bard':
+        try:
+            input_text = update.message.text
+            # remove bot name from text with @
+            pattern = f"@{context.bot.username}"
+            input_text = input_text.replace(pattern, '')
+            response = chat_session.send_message(input_text)
+            print(f"[i] {update.effective_user.username} reply: {response}")
             await message.edit_text(response)
-        if response != prev_response:
-            await message.edit_text(response)
-        print(f"[i] {update.effective_user.username} reply: {response}")
-    except Exception as e:
-        print(f"[!] error: {e}")
-        chat_session.reset()
-        await message.edit_text('Error orrurred, please try again later. Your chat history has been reset.')
+        except Exception as e:
+            print(f"[!] error: {e}")
+            chat_session.reset()
+            await message.edit_text('Error orrurred, please try again later. Your chat history has been reset.')
+
+    elif current_mode == 'claude':
+        try:
+            input_text = update.message.text
+            # remove bot name from text with @
+            pattern = f"@{context.bot.username}"
+            input_text = input_text.replace(pattern, '')
+            # response = chat_session.chat(input_text)
+            prev_response = ""
+            for response in chat_session.send_message_stream(input_text):
+                if abs(len(response) - len(prev_response)) < 100:
+                    continue
+                prev_response = response
+                await message.edit_text(response)
+            if response != prev_response:
+                await message.edit_text(response)
+            print(f"[i] {update.effective_user.username} reply: {response}")
+        except Exception as e:
+            print(f"[!] error: {e}")
+            chat_session.reset()
+            await message.edit_text('Error orrurred, please try again later. Your chat history has been reset.')
 
 
 # Settings
@@ -202,17 +191,42 @@ async def show_settings(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
+        chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
 
-    current_model, current_temperature = chat_session.get_settings()
-    reply_text = f"<b>Current model:</b> {current_model}\n" + \
-                 f"<b>Current temperature:</b> {current_temperature}\n\n" + \
-        "Command: /model to change Claude model.\n" + \
-        "Command: /temperature to change Claude temperature.\n" + \
-        "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>"
+    current_mode = chat_session.get_mode()
+    reply_text = f"<b>Current mode:</b> {current_mode}\n"
+    if current_mode == 'bard':
+        reply_text += "\nCommand: /mode to use Anthropic Claude (history will be cleared)"
+    elif current_mode == 'claude':
+        current_model, current_temperature = chat_session.get_settings()
+        reply_text += f"<b>Current model:</b> {current_model}\n" + \
+                      f"<b>Current temperature:</b> {current_temperature}\n\n" + \
+                      "Command: /mode to use Google Bard (history will be cleared)\n" + \
+                      "Command: /model to change Claude model\n" + \
+                      "Command: /temperature to change Claude temperature\n" + \
+                      "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>"
 
     await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
+
+
+async def change_mode(update: Update, context):
+    if not check_should_handle(update, context):
+        return
+    if not validate_user(update):
+        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        return
+
+    chat_session = chat_context_container.get(user_identifier(update))
+    if chat_session is None:
+        chat_session = create_session(id=user_identifier(update))
+        chat_context_container[user_identifier(update)] = chat_session
+
+    current_mode = chat_session.get_mode()
+    final_mode = 'bard' if current_mode == 'claude' else 'claude'
+    chat_session = create_session(mode=final_mode, id=user_identifier(update))
+    chat_context_container[user_identifier(update)] = chat_session
+    await update.message.reply_text(f"✅ Mode was switched to {final_mode}.")
 
 
 async def change_model(update: Update, context):
@@ -224,8 +238,12 @@ async def change_model(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
+        chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
+
+    if chat_session.get_mode() != 'claude':
+        await update.message.reply_text('Invalid option!')
+        return
 
     if len(context.args) != 1:
         await update.message.reply_text('Please provide a model name!')
@@ -246,8 +264,12 @@ async def change_temperature(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
+        chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
+
+    if chat_session.get_mode() != 'claude':
+        await update.message.reply_text('Invalid option!')
+        return
 
     if len(context.args) != 1:
         await update.message.reply_text('Please provide a temperature value!')
@@ -394,10 +416,10 @@ handler_list = [
     CommandHandler('status', status),
     CommandHandler('reboot', reboot),
     CommandHandler('settings', show_settings),
+    CommandHandler('mode', change_mode),
     CommandHandler('model', change_model),
     CommandHandler('temperature', change_temperature),
-    # MessageHandler(None, recv_msg),
-    MessageHandler(None, recv_msg_stream),
+    MessageHandler(None, recv_msg),
 ]
 for handler in handler_list:
     application.add_handler(handler)

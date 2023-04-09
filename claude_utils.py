@@ -4,6 +4,7 @@ import config
 
 class Claude:
     def __init__(self, id=None) -> None:
+        self.mode = "claude"
         self.model = "claude-v1.2"
         self.temperature = 1.
         self.max_tokens_to_sample = 9216
@@ -15,6 +16,9 @@ class Claude:
     def reset(self):
         self.prompt = ""
         self.max_tokens_to_sample = 9216
+
+    def get_mode(self):
+        return self.mode
 
     def get_settings(self):
         return self.model, self.temperature
