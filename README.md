@@ -32,3 +32,5 @@ This bot is intended as a starting point for creating your own customized Telegr
 ## Acknowledgements
 
 This code was based off of [Lakr233's ChatBot-TGLM6B](https://github.com/Lakr233/ChatBot-TGLM6B). Huge thanks to Lakr233 for making their code available!
+
+The **unofficial** API for Google Bard can be obtained by following the instructions in [acheong08's Bard](https://github.com/acheong08/Bard).
