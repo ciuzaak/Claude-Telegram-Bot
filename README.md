@@ -33,4 +33,6 @@ This bot is intended as a starting point for creating your own customized Telegr
 
 This code was based off of [Lakr233's ChatBot-TGLM6B](https://github.com/Lakr233/ChatBot-TGLM6B). Huge thanks to Lakr233 for making their code available!
 
+The client library for Claude API is [anthropics's anthropic-sdk-python](https://github.com/anthropics/anthropic-sdk-python).
+
 The **unofficial** API for Google Bard can be obtained by following the instructions in [acheong08's Bard](https://github.com/acheong08/Bard).
