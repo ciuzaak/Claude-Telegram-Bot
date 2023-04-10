@@ -35,8 +35,7 @@ print("[+] booting bot...")
 def create_session(mode='claude', id=None):
     if mode == 'claude':
         return Claude(id)
-    elif mode == 'bard':
-        return Bard(id)
+    return Bard(id)
 
 
 def validate_user(update: Update) -> bool:
@@ -109,7 +108,7 @@ def user_identifier(update: Update) -> str:
 
 async def reset_chat(update: Update, context):
     if not validate_user(update):
-        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
     if check_timestamp(update) is False:
         return
@@ -117,9 +116,9 @@ async def reset_chat(update: Update, context):
     user_id = user_identifier(update)
     if user_id in chat_context_container:
         chat_context_container[user_id].reset()
-        await update.message.reply_text('Chat history has been reset')
+        await update.message.reply_text('✅ Chat history has been reset')
     else:
-        await update.message.reply_text('Chat history is empty')
+        await update.message.reply_text('❌ Chat history is empty')
 
 
 # reply. Stream chat for claude
@@ -127,7 +126,7 @@ async def recv_msg(update: Update, context):
     if not check_should_handle(update, context):
         return
     if not validate_user(update):
-        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -157,9 +156,9 @@ async def recv_msg(update: Update, context):
         except Exception as e:
             print(f"[!] error: {e}")
             chat_session.reset()
-            await message.edit_text('Error orrurred, please try again later. Your chat history has been reset.')
+            await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
-    elif current_mode == 'claude':
+    else:  # Claude
         try:
             input_text = update.message.text
             # remove bot name from text with @
@@ -178,7 +177,7 @@ async def recv_msg(update: Update, context):
         except Exception as e:
             print(f"[!] error: {e}")
             chat_session.reset()
-            await message.edit_text('Error orrurred, please try again later. Your chat history has been reset.')
+            await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
 
 # Settings
@@ -186,7 +185,7 @@ async def show_settings(update: Update, context):
     if not check_should_handle(update, context):
         return
     if not validate_user(update):
-        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -198,7 +197,7 @@ async def show_settings(update: Update, context):
     reply_text = f"<b>Current mode:</b> {current_mode}\n"
     if current_mode == 'bard':
         reply_text += "\nCommand: /mode to use Anthropic Claude (history will be cleared)"
-    elif current_mode == 'claude':
+    else:  # Claude
         current_model, current_temperature = chat_session.get_settings()
         reply_text += f"<b>Current model:</b> {current_model}\n" + \
                       f"<b>Current temperature:</b> {current_temperature}\n\n" + \
@@ -214,7 +213,7 @@ async def change_mode(update: Update, context):
     if not check_should_handle(update, context):
         return
     if not validate_user(update):
-        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -227,13 +226,14 @@ async def change_mode(update: Update, context):
     chat_session = create_session(mode=final_mode, id=user_identifier(update))
     chat_context_container[user_identifier(update)] = chat_session
     await update.message.reply_text(f"✅ Mode was switched to {final_mode}.")
+    await show_settings(update, context)
 
 
 async def change_model(update: Update, context):
     if not check_should_handle(update, context):
         return
     if not validate_user(update):
-        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -241,25 +241,26 @@ async def change_model(update: Update, context):
         chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
 
-    if chat_session.get_mode() != 'claude':
-        await update.message.reply_text('Invalid option!')
+    if chat_session.get_mode() == 'bard':
+        await update.message.reply_text('❌ Invalid option for Google Bard!')
         return
 
     if len(context.args) != 1:
-        await update.message.reply_text('Please provide a model name!')
+        await update.message.reply_text('❌ Please provide a model name!')
         return
     model = context.args[0].strip()
     if not chat_session.change_model(model):
-        await update.message.reply_text("Invalid model name!")
+        await update.message.reply_text("❌ Invalid model name!")
         return
     await update.message.reply_text(f"✅ Model was switched to {model}.")
+    await show_settings(update, context)
 
 
 async def change_temperature(update: Update, context):
     if not check_should_handle(update, context):
         return
     if not validate_user(update):
-        await update.message.reply_text('Sadly, you are not allowed to use this bot at this time.')
+        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -267,18 +268,19 @@ async def change_temperature(update: Update, context):
         chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
 
-    if chat_session.get_mode() != 'claude':
-        await update.message.reply_text('Invalid option!')
+    if chat_session.get_mode() == 'bard':
+        await update.message.reply_text('❌ Invalid option for Google Bard!')
         return
 
     if len(context.args) != 1:
-        await update.message.reply_text('Please provide a temperature value!')
+        await update.message.reply_text('❌ Please provide a temperature value!')
         return
     temperature = context.args[0].strip()
     if not chat_session.change_temperature(temperature):
-        await update.message.reply_text("Invalid temperature value!")
+        await update.message.reply_text("❌ Invalid temperature value!")
         return
     await update.message.reply_text(f"✅ Temperature was set to {temperature}.")
+    await show_settings(update, context)
 
 
 async def start_bot(update: Update, context):
@@ -317,19 +319,19 @@ async def grant(update: Update, context):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
-        await update.message.reply_text('You are not admin!')
+        await update.message.reply_text('❌ You are not admin!')
         return
     if len(context.args) != 1:
-        await update.message.reply_text('Please provide a user id to grant!')
+        await update.message.reply_text('❌ Please provide a user id to grant!')
         return
     user_id = context.args[0].strip()
     if user_id in fine_granted_identifier:
-        await update.message.reply_text('User already has fine-granted access!')
+        await update.message.reply_text('❌ User already has fine-granted access!')
         return
     fine_granted_identifier.append(user_id)
     with open('fine_granted_identifier.json', 'w') as f:
         json.dump(list(fine_granted_identifier), f)
-    await update.message.reply_text('User has been granted fine-granted access!')
+    await update.message.reply_text('✅ User has been granted fine-granted access!')
 
 
 async def ban(update: Update, context):
@@ -337,10 +339,10 @@ async def ban(update: Update, context):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
-        await update.message.reply_text('You are not admin!')
+        await update.message.reply_text('❌ You are not admin!')
         return
     if len(context.args) != 1:
-        await update.message.reply_text('Please provide a user id to ban!')
+        await update.message.reply_text('❌ Please provide a user id to ban!')
         return
     user_id = context.args[0].strip()
     if user_id in fine_granted_identifier:
@@ -349,7 +351,7 @@ async def ban(update: Update, context):
         del chat_context_container[user_id]
     with open('fine_granted_identifier.json', 'w') as f:
         json.dump(list(fine_granted_identifier), f)
-    await update.message.reply_text('User has been banned!')
+    await update.message.reply_text('✅ User has been banned!')
 
 
 async def status(update: Update, context):
@@ -357,7 +359,7 @@ async def status(update: Update, context):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
-        await update.message.reply_text('You are not admin!')
+        await update.message.reply_text('❌ You are not admin!')
         return
     report = [
         'Status Report:',
@@ -383,10 +385,10 @@ async def reboot(update: Update, context):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
-        await update.message.reply_text('You are not admin!')
+        await update.message.reply_text('❌ You are not admin!')
         return
     chat_context_container.clear()
-    await update.message.reply_text('All chat history has been cleared!')
+    await update.message.reply_text('✅ All chat history has been cleared!')
 
 
 async def post_init(application: Application):
