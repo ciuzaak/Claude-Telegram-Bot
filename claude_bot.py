@@ -397,10 +397,6 @@ async def post_init(application: Application):
         BotCommand('/id', 'Get your chat identifier'),
         BotCommand('/settings', 'Show and edit Claude settings'),
         BotCommand('/help', 'Get help message'),
-        BotCommand('/grant', '(Admin) Grant fine-granted access to a user'),
-        BotCommand('/ban', '(Admin) Ban a user'),
-        BotCommand('/status', '(Admin) Report the status of the bot'),
-        BotCommand('/reboot', '(Admin) Clear all chat history'),
     ])
 
 boot_time = datetime.datetime.now()
