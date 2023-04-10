@@ -17,4 +17,4 @@ class Bard:
         return self.mode
 
     def send_message(self, message):
-        return self.client.ask(message)['content']
+        return self.client.ask(message)

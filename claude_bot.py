@@ -1,12 +1,13 @@
 import os
 import json
 import datetime
-from telegram import Update, BotCommand
+from telegram import Update, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application
 import config
 from claude_utils import Claude
 from bard_utils import Bard
+import urllib.parse
 
 
 print(f"[+] welcome to chat bot")
@@ -151,8 +152,27 @@ async def recv_msg(update: Update, context):
             pattern = f"@{context.bot.username}"
             input_text = input_text.replace(pattern, '')
             response = chat_session.send_message(input_text)
-            print(f"[i] {update.effective_user.username} reply: {response}")
-            await message.edit_text(response)
+
+            content = response['content']
+            factualityQueries = response['factualityQueries']
+            textQuery = response['textQuery']
+
+            print(f"[i] {update.effective_user.username} reply: {content}")
+            await message.edit_text(content)
+
+            if factualityQueries:
+                sources = "\n\nSources - Learn More"
+                for i in range(len(factualityQueries[0])):
+                    sources += f"\n{i + 1}. {factualityQueries[0][i][2][0]}"
+                await message.edit_text(content + sources)
+
+            if textQuery != "":
+                search_url = f"https://www.google.com/search?q={urllib.parse.quote(textQuery[0])}"
+                search_button = [[InlineKeyboardButton(
+                    text="🔍 Google it", url=search_url)]]
+                search_markup = InlineKeyboardMarkup(search_button)
+                await message.edit_reply_markup(search_markup)
+
         except Exception as e:
             print(f"[!] error: {e}")
             chat_session.reset()
