@@ -6,6 +6,7 @@ This bot is intended as a starting point for creating your own customized Telegr
 
 <p align="center">
     <img src="demo/demo.gif" alt="demo" width="288">
+    <img src="demo/demo_bard.jpg" alt="demo" width="288">
 </p>
 
 ## Installation
