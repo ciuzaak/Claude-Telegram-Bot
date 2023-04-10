@@ -394,7 +394,6 @@ async def reboot(update: Update, context):
 async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand('/reset', 'Reset the chat history'),
-        BotCommand('/id', 'Get your chat identifier'),
         BotCommand('/settings', 'Show and edit Claude settings'),
         BotCommand('/help', 'Get help message'),
     ])
