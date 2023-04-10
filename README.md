@@ -4,10 +4,10 @@
 
 - Obtain APIs: [Claude](https://console.anthropic.com/account/keys) | [Bard (unofficial)](https://github.com/acheong08/Bard)
 
-<p align="center">
-    <img src="demo/demo.gif" alt="demo" width="288">
-    <img src="demo/demo_bard.jpg" alt="demo" width="288">
-</p>
+|                             Claude                             |                            Bard                            |
+| :------------------------------------------------------------: | :--------------------------------------------------------: |
+|                   ❌Online - ✅Stream generate                   |                 ✅Online - ❌Stream generate                 |
+| <img src="demo/demo_claude.gif" alt="demo_claude" width="288"> | <img src="demo/demo_bard.gif" alt="demo_bard" width="288"> |
 
 ## Installation
 
