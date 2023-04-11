@@ -158,13 +158,52 @@ async def recv_msg(update: Update, context):
             textQuery = response['textQuery']
 
             print(f"[i] {update.effective_user.username} reply: {content}")
-            await message.edit_text(content)
+            content = content.replace('_', '\\_') \
+                             .replace('[', '\\[') \
+                             .replace(']', '\\]') \
+                             .replace('(', '\\(') \
+                             .replace(')', '\\)') \
+                             .replace('~', '\\~') \
+                             .replace('>', '\\>') \
+                             .replace('#', '\\#') \
+                             .replace('+', '\\+') \
+                             .replace('-', '\\-') \
+                             .replace('=', '\\=') \
+                             .replace('|', '\\|') \
+                             .replace('{', '\\{') \
+                             .replace('}', '\\}') \
+                             .replace('.', '\\.') \
+                             .replace('!', '\\!') \
+                             .replace('**', '<@>') \
+                             .replace('*', '\\*') \
+                             .replace('<@>', '*')
+            #  .replace('`', '\\`') \
+            await message.edit_text(content, parse_mode=ParseMode.MARKDOWN_V2)
 
             if factualityQueries:
                 sources = "\n\nSources - Learn More"
                 for i in range(len(factualityQueries[0])):
                     sources += f"\n{i + 1}. {factualityQueries[0][i][2][0]}"
-                await message.edit_text(content + sources)
+
+                sources = sources.replace('_', '\\_') \
+                                 .replace('*', '\\*') \
+                                 .replace('[', '\\[') \
+                                 .replace(']', '\\]') \
+                                 .replace('(', '\\(') \
+                                 .replace(')', '\\)') \
+                                 .replace('~', '\\~') \
+                                 .replace('`', '\\`') \
+                                 .replace('>', '\\>') \
+                                 .replace('#', '\\#') \
+                                 .replace('+', '\\+') \
+                                 .replace('-', '\\-') \
+                                 .replace('=', '\\=') \
+                                 .replace('|', '\\|') \
+                                 .replace('{', '\\{') \
+                                 .replace('}', '\\}') \
+                                 .replace('.', '\\.') \
+                                 .replace('!', '\\!')
+                await message.edit_text(content + sources, parse_mode=ParseMode.MARKDOWN_V2)
 
             if textQuery != "":
                 search_url = f"https://www.google.com/search?q={urllib.parse.quote(textQuery[0])}"
