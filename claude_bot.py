@@ -257,7 +257,7 @@ async def recv_msg(update: Update, context):
             if response != prev_response:
                 await message.edit_text(response, parse_mode=ParseMode.MARKDOWN_V2)
             else:
-                await message.edit_text(parse_mode=ParseMode.MARKDOWN_V2)
+                await message.edit_text(response + "\n\\.", parse_mode=ParseMode.MARKDOWN_V2)
 
         except Exception as e:
             print(f"[!] error: {e}")
