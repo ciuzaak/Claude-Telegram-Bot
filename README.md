@@ -9,7 +9,7 @@
 |                   ❌Online - ✅Stream generate                   |                 ✅Online - ❌Stream generate                 |
 | <img src="demo/demo_claude.gif" alt="demo_claude" width="288"> | <img src="demo/demo_bard.gif" alt="demo_bard" width="288"> |
 
-## Installation
+## Usage
 
 1. Fill out the necessary information in `config.yml` file.
 2. Run the following command in terminal to create the virtual environment:
