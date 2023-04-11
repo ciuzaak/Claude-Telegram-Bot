@@ -135,7 +135,7 @@ async def recv_msg(update: Update, context):
         chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
 
-    print(f"[i] {update.effective_user.username} said: {update.message.text}")
+    # print(f"[i] {update.effective_user.username} said: {update.message.text}")
 
     message = await update.message.reply_text(
         '... thinking ...'
@@ -157,7 +157,7 @@ async def recv_msg(update: Update, context):
             factualityQueries = response['factualityQueries']
             textQuery = response['textQuery']
 
-            print(f"[i] {update.effective_user.username} reply: {content}")
+            # print(f"[i] {update.effective_user.username} reply: {content}")
             content = content.replace('_', '\\_') \
                              .replace('[', '\\[') \
                              .replace(']', '\\]') \
@@ -182,8 +182,12 @@ async def recv_msg(update: Update, context):
 
             if factualityQueries:
                 sources = "\n\nSources - Learn More"
+                item = 0
                 for i in range(len(factualityQueries[0])):
-                    sources += f"\n{i + 1}. {factualityQueries[0][i][2][0]}"
+                    source_link = factualityQueries[0][i][2][0]
+                    if source_link != "":
+                        item += 1
+                        sources += f"\n{item}. {source_link}"
 
                 sources = sources.replace('_', '\\_') \
                                  .replace('*', '\\*') \
@@ -232,7 +236,7 @@ async def recv_msg(update: Update, context):
                 await message.edit_text(response)
             if response != prev_response:
                 await message.edit_text(response)
-            print(f"[i] {update.effective_user.username} reply: {response}")
+            # print(f"[i] {update.effective_user.username} reply: {response}")
         except Exception as e:
             print(f"[!] error: {e}")
             chat_session.reset()
