@@ -234,9 +234,31 @@ async def recv_msg(update: Update, context):
                     continue
                 prev_response = response
                 await message.edit_text(response)
-            if response != prev_response:
-                await message.edit_text(response)
             # print(f"[i] {update.effective_user.username} reply: {response}")
+
+            response = response.replace('_', '\\_') \
+                               .replace('*', '\\*') \
+                               .replace('[', '\\[') \
+                               .replace(']', '\\]') \
+                               .replace('(', '\\(') \
+                               .replace(')', '\\)') \
+                               .replace('~', '\\~') \
+                               .replace('>', '\\>') \
+                               .replace('#', '\\#') \
+                               .replace('+', '\\+') \
+                               .replace('-', '\\-') \
+                               .replace('=', '\\=') \
+                               .replace('|', '\\|') \
+                               .replace('{', '\\{') \
+                               .replace('}', '\\}') \
+                               .replace('.', '\\.') \
+                               .replace('!', '\\!')
+            #    .replace('`', '\\`') \
+            if response != prev_response:
+                await message.edit_text(response, parse_mode=ParseMode.MARKDOWN_V2)
+            else:
+                await message.edit_text(parse_mode=ParseMode.MARKDOWN_V2)
+
         except Exception as e:
             print(f"[!] error: {e}")
             chat_session.reset()
