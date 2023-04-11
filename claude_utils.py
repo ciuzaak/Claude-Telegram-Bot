@@ -5,7 +5,7 @@ import config
 class Claude:
     def __init__(self, id=None) -> None:
         self.mode = "claude"
-        self.model = "claude-v1.2"
+        self.model = "claude-v1.3"
         self.temperature = 1.
         self.max_tokens_to_sample = 9216
         self.stop_sequences = [anthropic.HUMAN_PROMPT]
@@ -24,7 +24,7 @@ class Claude:
         return self.model, self.temperature
 
     def change_model(self, model):
-        if model in ['claude-v1', 'claude-v1.0', 'claude-v1.2', 'claude-instant-v1', 'claude-instant-v1.0']:
+        if model in ['claude-v1', 'claude-v1.0', 'claude-v1.2', 'claude-v1.3', 'claude-instant-v1', 'claude-instant-v1.0']:
             self.model = model
             return True
         return False
