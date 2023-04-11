@@ -158,7 +158,8 @@ async def recv_msg(update: Update, context):
             textQuery = response['textQuery']
 
             # print(f"[i] {update.effective_user.username} reply: {content}")
-            content = content.replace('_', '\\_') \
+            content = content.replace('\\', '\\\\') \
+                             .replace('_', '\\_') \
                              .replace('[', '\\[') \
                              .replace(']', '\\]') \
                              .replace('(', '\\(') \
@@ -189,7 +190,8 @@ async def recv_msg(update: Update, context):
                         item += 1
                         sources += f"\n{item}. {source_link}"
 
-                sources = sources.replace('_', '\\_') \
+                sources = sources.replace('\\', '\\\\') \
+                                 .replace('_', '\\_') \
                                  .replace('*', '\\*') \
                                  .replace('[', '\\[') \
                                  .replace(']', '\\]') \
@@ -236,7 +238,8 @@ async def recv_msg(update: Update, context):
                 await message.edit_text(response)
             # print(f"[i] {update.effective_user.username} reply: {response}")
 
-            response = response.replace('_', '\\_') \
+            response = response.replace('\\', '\\\\') \
+                               .replace('_', '\\_') \
                                .replace('*', '\\*') \
                                .replace('[', '\\[') \
                                .replace(']', '\\]') \
