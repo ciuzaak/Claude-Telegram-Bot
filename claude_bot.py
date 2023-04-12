@@ -188,12 +188,14 @@ async def recv_msg(update: Update, context):
                 else:
                     await message.edit_text(content + sources + '\n\n❌ Markdown failed.')
 
-            if textQuery != "":
-                search_url = f"https://www.google.com/search?q={urllib.parse.quote(textQuery[0])}"
-                search_button = [[InlineKeyboardButton(
-                    text="🔍 Google it", url=search_url)]]
-                search_markup = InlineKeyboardMarkup(search_button)
-                await message.edit_reply_markup(search_markup)
+            # Google it
+            search_prefix = "https://www.google.com/search?q="
+            search_url = f"{search_prefix}{urllib.parse.quote(textQuery[0])}" if textQuery != "" \
+                else f"{search_prefix}{urllib.parse.quote(input_text)}"
+            search_button = [[InlineKeyboardButton(
+                text="🔍 Google it", url=search_url)]]
+            search_markup = InlineKeyboardMarkup(search_button)
+            await message.edit_reply_markup(search_markup)
 
         else:  # Claude
             prev_response = ""
