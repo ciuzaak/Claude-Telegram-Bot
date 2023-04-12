@@ -137,8 +137,6 @@ async def recv_msg(update: Update, context):
         chat_session = create_session(id=user_identifier(update))
         chat_context_container[user_identifier(update)] = chat_session
 
-    # print(f"[i] {update.effective_user.username} said: {update.message.text}")
-
     message = await update.message.reply_text(
         '... thinking ...'
     )
@@ -146,22 +144,23 @@ async def recv_msg(update: Update, context):
         print("[!] failed to send message")
         return
 
-    current_mode = chat_session.get_mode()
-    if current_mode == 'bard':
-        try:
-            input_text = update.message.text
-            # remove bot name from text with @
-            pattern = f"@{context.bot.username}"
-            input_text = input_text.replace(pattern, '')
-            response = chat_session.send_message(input_text)
+    try:
+        input_text = update.message.text
+        # remove bot name from text with @
+        pattern = f"@{context.bot.username}"
+        input_text = input_text.replace(pattern, '')
+        current_mode = chat_session.get_mode()
 
+        if current_mode == 'bard':
+            response = chat_session.send_message(input_text)
             content = response['content']
             factualityQueries = response['factualityQueries']
             textQuery = response['textQuery']
 
-            # print(f"[i] {update.effective_user.username} reply: {content}")
-            _content = re.sub(r'[\_\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content)
-            _content = _content.replace('**', '<@>').replace('*', '\\*').replace('<@>', '*')
+            _content = re.sub(
+                r'[\_\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content)
+            _content = _content.replace(
+                '**', '<@>').replace('*', '\\*').replace('<@>', '*')
             markdown = False
             try:
                 await message.edit_text(_content, parse_mode=ParseMode.MARKDOWN_V2)
@@ -182,7 +181,8 @@ async def recv_msg(update: Update, context):
                     if source_link != "":
                         item += 1
                         sources += f"\n{item}. {source_link}"
-                sources = re.sub(r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), sources)
+                sources = re.sub(
+                    r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), sources)
                 if markdown:
                     await message.edit_text(_content + sources, parse_mode=ParseMode.MARKDOWN_V2)
                 else:
@@ -195,27 +195,16 @@ async def recv_msg(update: Update, context):
                 search_markup = InlineKeyboardMarkup(search_button)
                 await message.edit_reply_markup(search_markup)
 
-        except Exception as e:
-            print(f"[!] error: {e}")
-            chat_session.reset()
-            await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
-
-    else:  # Claude
-        try:
-            input_text = update.message.text
-            # remove bot name from text with @
-            pattern = f"@{context.bot.username}"
-            input_text = input_text.replace(pattern, '')
-            # response = chat_session.chat(input_text)
+        else:  # Claude
             prev_response = ""
             for response in chat_session.send_message_stream(input_text):
                 if abs(len(response) - len(prev_response)) < 100:
                     continue
                 prev_response = response
                 await message.edit_text(response)
-            # print(f"[i] {update.effective_user.username} reply: {response}")
 
-            _response = re.sub(r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), response)
+            _response = re.sub(
+                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), response)
             try:
                 await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
             except telegram.error.BadRequest as e:
@@ -225,10 +214,10 @@ async def recv_msg(update: Update, context):
                     print(f"[!] error: {e}")
                     await message.edit_text(response + '\n\n❌ Markdown failed.')
 
-        except Exception as e:
-            print(f"[!] error: {e}")
-            chat_session.reset()
-            await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
+    except Exception as e:
+        print(f"[!] error: {e}")
+        chat_session.reset()
+        await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
 
 # Settings
