@@ -184,7 +184,7 @@ async def recv_msg(update: Update, context):
                         sources += f"\n{item}. {source_link}"
                 sources = re.sub(r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), sources)
                 if markdown:
-                    await message.edit_text(content + sources, parse_mode=ParseMode.MARKDOWN_V2)
+                    await message.edit_text(_content + sources, parse_mode=ParseMode.MARKDOWN_V2)
                 else:
                     await message.edit_text(content + sources + '\n\n❌ Markdown failed.')
 
