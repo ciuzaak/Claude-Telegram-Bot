@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+import telegram
 from telegram import Update, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application
@@ -8,6 +9,7 @@ import config
 from claude_utils import Claude
 from bard_utils import Bard
 import urllib.parse
+import re
 
 
 print(f"[+] welcome to chat bot")
@@ -158,28 +160,19 @@ async def recv_msg(update: Update, context):
             textQuery = response['textQuery']
 
             # print(f"[i] {update.effective_user.username} reply: {content}")
-            content = content.replace('\\', '\\\\') \
-                             .replace('_', '\\_') \
-                             .replace('[', '\\[') \
-                             .replace(']', '\\]') \
-                             .replace('(', '\\(') \
-                             .replace(')', '\\)') \
-                             .replace('~', '\\~') \
-                             .replace('>', '\\>') \
-                             .replace('#', '\\#') \
-                             .replace('+', '\\+') \
-                             .replace('-', '\\-') \
-                             .replace('=', '\\=') \
-                             .replace('|', '\\|') \
-                             .replace('{', '\\{') \
-                             .replace('}', '\\}') \
-                             .replace('.', '\\.') \
-                             .replace('!', '\\!') \
-                             .replace('**', '<@>') \
-                             .replace('*', '\\*') \
-                             .replace('<@>', '*')
-            #  .replace('`', '\\`') \
-            await message.edit_text(content, parse_mode=ParseMode.MARKDOWN_V2)
+            _content = re.sub(r'[\_\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content)
+            _content = _content.replace('**', '<@>').replace('*', '\\*').replace('<@>', '*')
+            markdown = False
+            try:
+                await message.edit_text(_content, parse_mode=ParseMode.MARKDOWN_V2)
+                markdown = True
+            except telegram.error.BadRequest as e:
+                if str(e).startswith("Message is not modified"):
+                    await message.edit_text(_content + '\n\\.', parse_mode=ParseMode.MARKDOWN_V2)
+                    markdown = True
+                else:
+                    print(f"[!] error: {e}")
+                    await message.edit_text(content + '\n\n❌ Markdown failed.')
 
             if factualityQueries:
                 sources = "\n\nSources - Learn More"
@@ -189,27 +182,11 @@ async def recv_msg(update: Update, context):
                     if source_link != "":
                         item += 1
                         sources += f"\n{item}. {source_link}"
-
-                sources = sources.replace('\\', '\\\\') \
-                                 .replace('_', '\\_') \
-                                 .replace('*', '\\*') \
-                                 .replace('[', '\\[') \
-                                 .replace(']', '\\]') \
-                                 .replace('(', '\\(') \
-                                 .replace(')', '\\)') \
-                                 .replace('~', '\\~') \
-                                 .replace('`', '\\`') \
-                                 .replace('>', '\\>') \
-                                 .replace('#', '\\#') \
-                                 .replace('+', '\\+') \
-                                 .replace('-', '\\-') \
-                                 .replace('=', '\\=') \
-                                 .replace('|', '\\|') \
-                                 .replace('{', '\\{') \
-                                 .replace('}', '\\}') \
-                                 .replace('.', '\\.') \
-                                 .replace('!', '\\!')
-                await message.edit_text(content + sources, parse_mode=ParseMode.MARKDOWN_V2)
+                sources = re.sub(r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), sources)
+                if markdown:
+                    await message.edit_text(content + sources, parse_mode=ParseMode.MARKDOWN_V2)
+                else:
+                    await message.edit_text(content + sources + '\n\n❌ Markdown failed.')
 
             if textQuery != "":
                 search_url = f"https://www.google.com/search?q={urllib.parse.quote(textQuery[0])}"
@@ -238,29 +215,15 @@ async def recv_msg(update: Update, context):
                 await message.edit_text(response)
             # print(f"[i] {update.effective_user.username} reply: {response}")
 
-            response = response.replace('\\', '\\\\') \
-                               .replace('_', '\\_') \
-                               .replace('*', '\\*') \
-                               .replace('[', '\\[') \
-                               .replace(']', '\\]') \
-                               .replace('(', '\\(') \
-                               .replace(')', '\\)') \
-                               .replace('~', '\\~') \
-                               .replace('>', '\\>') \
-                               .replace('#', '\\#') \
-                               .replace('+', '\\+') \
-                               .replace('-', '\\-') \
-                               .replace('=', '\\=') \
-                               .replace('|', '\\|') \
-                               .replace('{', '\\{') \
-                               .replace('}', '\\}') \
-                               .replace('.', '\\.') \
-                               .replace('!', '\\!')
-            #    .replace('`', '\\`') \
-            if response != prev_response:
-                await message.edit_text(response, parse_mode=ParseMode.MARKDOWN_V2)
-            else:
-                await message.edit_text(response + "\n\\.", parse_mode=ParseMode.MARKDOWN_V2)
+            _response = re.sub(r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), response)
+            try:
+                await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
+            except telegram.error.BadRequest as e:
+                if str(e).startswith("Message is not modified"):
+                    await message.edit_text(_response + '\n\\.', parse_mode=ParseMode.MARKDOWN_V2)
+                else:
+                    print(f"[!] error: {e}")
+                    await message.edit_text(response + '\n\n❌ Markdown failed.')
 
         except Exception as e:
             print(f"[!] error: {e}")
