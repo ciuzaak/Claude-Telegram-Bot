@@ -119,9 +119,9 @@ async def reset_chat(update: Update, context):
     user_id = user_identifier(update)
     if user_id in chat_context_container:
         chat_context_container[user_id].reset()
-        await update.message.reply_text('✅ Chat history has been reset')
+        await update.message.reply_text('✅ Chat history has been reset.')
     else:
-        await update.message.reply_text('❌ Chat history is empty')
+        await update.message.reply_text('❌ Chat history is empty.')
 
 
 # reply. Stream chat for claude
@@ -236,19 +236,29 @@ async def show_settings(update: Update, context):
         chat_context_container[user_identifier(update)] = chat_session
 
     current_mode = chat_session.get_mode()
-    reply_text = f"<b>Current mode:</b> {current_mode}\n"
+    infos = [
+        f'<b>Current mode:</b> {current_mode}',
+    ]
     if current_mode == 'bard':
-        reply_text += "\nCommand: /mode to use Anthropic Claude (history will be cleared)"
+        extras = [
+            '',
+            'Commands:',
+            '• /mode to use Anthropic Claude',
+        ]
     else:  # Claude
         current_model, current_temperature = chat_session.get_settings()
-        reply_text += f"<b>Current model:</b> {current_model}\n" + \
-                      f"<b>Current temperature:</b> {current_temperature}\n\n" + \
-                      "Command: /mode to use Google Bard (history will be cleared)\n" + \
-                      "Command: /model to change Claude model\n" + \
-                      "Command: /temperature to change Claude temperature\n" + \
-                      "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>"
-
-    await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
+        extras = [
+            f'<b>Current model:</b> {current_model}',
+            f'<b>Current temperature:</b> {current_temperature}',
+            '',
+            'Commands:',
+            '• /mode to use Google Bard',
+            '• [/model NAME] to change model',
+            '• [/temp VALUE] to set temperature',
+            "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>",
+        ]
+    infos.extend(extras)
+    await update.message.reply_text('\n'.join(infos), parse_mode=ParseMode.HTML)
 
 
 async def change_mode(update: Update, context):
@@ -267,7 +277,7 @@ async def change_mode(update: Update, context):
     final_mode = 'bard' if current_mode == 'claude' else 'claude'
     chat_session = create_session(mode=final_mode, id=user_identifier(update))
     chat_context_container[user_identifier(update)] = chat_session
-    await update.message.reply_text(f"✅ Mode was switched to {final_mode}.")
+    await update.message.reply_text(f"✅ Mode has been switched to {final_mode}.")
     await show_settings(update, context)
 
 
@@ -284,17 +294,17 @@ async def change_model(update: Update, context):
         chat_context_container[user_identifier(update)] = chat_session
 
     if chat_session.get_mode() == 'bard':
-        await update.message.reply_text('❌ Invalid option for Google Bard!')
+        await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
     if len(context.args) != 1:
-        await update.message.reply_text('❌ Please provide a model name!')
+        await update.message.reply_text('❌ Please provide a model name.')
         return
     model = context.args[0].strip()
     if not chat_session.change_model(model):
-        await update.message.reply_text("❌ Invalid model name!")
+        await update.message.reply_text("❌ Invalid model name.")
         return
-    await update.message.reply_text(f"✅ Model was switched to {model}.")
+    await update.message.reply_text(f"✅ Model has been switched to {model}.")
     await show_settings(update, context)
 
 
@@ -311,17 +321,17 @@ async def change_temperature(update: Update, context):
         chat_context_container[user_identifier(update)] = chat_session
 
     if chat_session.get_mode() == 'bard':
-        await update.message.reply_text('❌ Invalid option for Google Bard!')
+        await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
     if len(context.args) != 1:
-        await update.message.reply_text('❌ Please provide a temperature value!')
+        await update.message.reply_text('❌ Please provide a temperature value.')
         return
     temperature = context.args[0].strip()
     if not chat_session.change_temperature(temperature):
-        await update.message.reply_text("❌ Invalid temperature value!")
+        await update.message.reply_text("❌ Invalid temperature value.")
         return
-    await update.message.reply_text(f"✅ Temperature was set to {temperature}.")
+    await update.message.reply_text(f"✅ Temperature has been set to {temperature}.")
     await show_settings(update, context)
 
 
@@ -330,23 +340,26 @@ async def start_bot(update: Update, context):
         return
     id = user_identifier(update)
     welcome_strs = [
-        'Welcome to Claude Telegram Bot',
+        'Welcome to <b>Claude & Bard Telegram Bot</b>',
         '',
-        'Command: /id to get your chat identifier',
-        'Command: /reset to reset the chat history',
-        'Command: /settings to show and edit Claude settings',
+        'Commands:',
+        '• /id to get your chat identifier',
+        '• /reset to reset the chat history',
+        '• /mode to switch between Claude & Bard',
+        '• /settings to show Claude & Bard settings',
     ]
     if id in admin_id:
         extra = [
             '',
-            'Admin Command: /grant to grant fine-granted access to a user',
-            'Admin Command: /ban to ban a user',
-            'Admin Command: /status to report the status of the bot',
-            'Admin Command: /reboot to clear all chat history',
+            'Admin Commands:',
+            '• /grant to grant fine-granted access to a user',
+            '• /ban to ban a user',
+            '• /status to report the status of the bot',
+            '• /reboot to clear all chat history',
         ]
         welcome_strs.extend(extra)
     print(f"[i] {update.effective_user.username} started the bot")
-    await update.message.reply_text('\n'.join(welcome_strs))
+    await update.message.reply_text('\n'.join(welcome_strs), parse_mode=ParseMode.HTML)
 
 
 async def send_id(update: Update, context):
@@ -436,7 +449,8 @@ async def reboot(update: Update, context):
 async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand('/reset', 'Reset the chat history'),
-        BotCommand('/settings', 'Show and edit Claude settings'),
+        BotCommand('/mode', 'Switch between Claude & Bard'),
+        BotCommand('/settings', 'Show Claude & Bard settings'),
         BotCommand('/help', 'Get help message'),
     ])
 
@@ -457,7 +471,7 @@ handler_list = [
     CommandHandler('settings', show_settings),
     CommandHandler('mode', change_mode),
     CommandHandler('model', change_model),
-    CommandHandler('temperature', change_temperature),
+    CommandHandler('temp', change_temperature),
     MessageHandler(None, recv_msg),
 ]
 for handler in handler_list:
