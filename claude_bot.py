@@ -158,9 +158,7 @@ async def recv_msg(update: Update, context):
             textQuery = response['textQuery']
 
             _content = re.sub(
-                r'[\_\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content)
-            _content = _content.replace(
-                '**', '<@>').replace('*', '\\*').replace('<@>', '*')
+                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content).replace('\\*\\*', '*')
             markdown = False
             try:
                 await message.edit_text(_content, parse_mode=ParseMode.MARKDOWN_V2)
