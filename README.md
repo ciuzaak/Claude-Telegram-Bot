@@ -22,7 +22,7 @@ If you only have access to one of the models, you can still continue to use this
 |                             Claude                             |                            Bard                            |
 | :------------------------------------------------------------: | :--------------------------------------------------------: |
 |                   ❌Online - ✅Stream generate                   |                 ✅Online - ❌Stream generate                 |
-| <img src="demo/demo_claude.gif" alt="demo_claude" width="288"> | <img src="demo/demo_bard.gif" alt="demo_bard" width="288"> |
+| <img src="https://user-images.githubusercontent.com/41275670/232092759-2bbedbf9-e2c2-4a8d-989d-ce2f89123e72.gif" alt="demo_claude" width="288"> | <img src="https://user-images.githubusercontent.com/41275670/232092737-e7112c8b-4ef4-498a-96c2-40d3ef21762a.gif" alt="demo_bard" width="288"> |
 
 ## Usage
 
