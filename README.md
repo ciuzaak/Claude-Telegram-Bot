@@ -17,12 +17,13 @@ If you only have access to one of the models, you can still continue to use this
 - Claude's streaming output
 - Modify [Claude's model (defaults to v1.3) and temperature (defaults to 1)](https://console.anthropic.com/docs/api/reference)
 - Show reference links and Google search keywords from Bard's answers
+- Switch between different drafts provided by Bard's answers
 - [Private chat, group chat, invitation mode, independent chat session](https://github.com/Lakr233/ChatBot-TGLM6B)
 
 |                             Claude                             |                            Bard                            |
 | :------------------------------------------------------------: | :--------------------------------------------------------: |
 |                   ❌Online - ✅Stream generate                   |                 ✅Online - ❌Stream generate                 |
-| <img src="https://user-images.githubusercontent.com/41275670/232092759-2bbedbf9-e2c2-4a8d-989d-ce2f89123e72.gif" alt="demo_claude" width="288"> | <img src="https://user-images.githubusercontent.com/41275670/232092737-e7112c8b-4ef4-498a-96c2-40d3ef21762a.gif" alt="demo_bard" width="288"> |
+| <img src="https://user-images.githubusercontent.com/41275670/232324173-6e451359-45be-4e87-a64a-5f485806b3fa.gif" alt="demo_claude" width="288"> | <img src="https://user-images.githubusercontent.com/41275670/232329807-71154441-58f0-4763-ab8b-8d6a74afb270.gif" alt="demo_bard" width="288"> |
 
 ## Usage
 
