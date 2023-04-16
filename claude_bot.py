@@ -1,16 +1,19 @@
-import os
-import json
 import datetime
-import telegram
-from telegram import Update, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application
-import config
-from claude_utils import Claude
-from bard_utils import Bard
-import urllib.parse
+import json
+import os
 import re
+import urllib.parse
 
+import telegram
+from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
+                      Update)
+from telegram.constants import ParseMode
+from telegram.ext import (Application, ApplicationBuilder,
+                          CallbackQueryHandler, CommandHandler, MessageHandler)
+
+import config
+from bard_utils import Bard
+from claude_utils import Claude
 
 print(f"[+] welcome to chat bot")
 
@@ -61,7 +64,7 @@ def check_timestamp(update: Update) -> bool:
     return True
 
 
-def check_should_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+def check_should_handle(update: Update, context) -> bool:
     if update.message is None or update.message.text is None or len(update.message.text) == 0:
         return False
 
@@ -124,6 +127,33 @@ async def reset_chat(update: Update, context):
         await update.message.reply_text('❌ Chat history is empty.')
 
 
+# Google bard: view other drafts
+async def view_other_drafts(update: Update, context):
+    if update.callback_query.data == 'drafts':
+        # increase choice index
+        context.user_data['param']['index'] = (
+            context.user_data['param']['index'] + 1) % len(context.user_data['param']['choices'])
+        await bard_response(**context.user_data['param'])
+
+
+# Google bard: response
+async def bard_response(client, message, markup, sources, choices, index):
+    client.choice_id = choices[index]['id']
+    content = choices[index]['content'][0]
+    _content = re.sub(
+        r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content).replace('\\*\\*', '*')
+    _sources = re.sub(
+        r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), sources)
+    try:
+        await message.edit_text(_content + _sources, reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
+    except telegram.error.BadRequest as e:
+        if str(e).startswith("Message is not modified"):
+            await message.edit_text(_content + _sources + '\n\\.', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
+        else:
+            print(f"[!] error: {e}")
+            await message.edit_text(content + sources + '\n\n❌ Markdown failed.', reply_markup=markup)
+
+
 # reply. Stream chat for claude
 async def recv_msg(update: Update, context):
     if not check_should_handle(update, context):
@@ -153,47 +183,24 @@ async def recv_msg(update: Update, context):
 
         if current_mode == 'bard':
             response = chat_session.send_message(input_text)
-            content = response['content']
-            factualityQueries = response['factualityQueries']
-            textQuery = response['textQuery']
+            # get source links
+            sources = ""
+            if response['factualityQueries']:
+                sources = "\n\nSources - Learn More\n"
+                links = set(item[2][0]
+                            for item in response['factualityQueries'][0] if item[2][0] != '')
+                sources += f"\n".join([f"{i+1}. {val}" for i,
+                                      val in enumerate(links)])
 
-            _content = re.sub(
-                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content).replace('\\*\\*', '*')
-            markdown = False
-            try:
-                await message.edit_text(_content, parse_mode=ParseMode.MARKDOWN_V2)
-                markdown = True
-            except telegram.error.BadRequest as e:
-                if str(e).startswith("Message is not modified"):
-                    await message.edit_text(_content + '\n\\.', parse_mode=ParseMode.MARKDOWN_V2)
-                    markdown = True
-                else:
-                    print(f"[!] error: {e}")
-                    await message.edit_text(content + '\n\n❌ Markdown failed.')
-
-            if factualityQueries:
-                sources = "\n\nSources - Learn More"
-                item = 0
-                for i in range(len(factualityQueries[0])):
-                    source_link = factualityQueries[0][i][2][0]
-                    if source_link != "":
-                        item += 1
-                        sources += f"\n{item}. {source_link}"
-                sources = re.sub(
-                    r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), sources)
-                if markdown:
-                    await message.edit_text(_content + sources, parse_mode=ParseMode.MARKDOWN_V2)
-                else:
-                    await message.edit_text(content + sources + '\n\n❌ Markdown failed.')
-
-            # Google it
-            search_prefix = "https://www.google.com/search?q="
-            search_url = f"{search_prefix}{urllib.parse.quote(textQuery[0])}" if textQuery != "" \
-                else f"{search_prefix}{urllib.parse.quote(input_text)}"
-            search_button = [[InlineKeyboardButton(
-                text="🔍 Google it", url=search_url)]]
-            search_markup = InlineKeyboardMarkup(search_button)
-            await message.edit_reply_markup(search_markup)
+            # Buttons
+            search_url = "https://www.google.com/search?q=" + (urllib.parse.quote(
+                response['textQuery'][0]) if response['textQuery'] != "" else urllib.parse.quote(input_text))
+            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text="📝 View other drafts", callback_data="drafts"), 
+                                            InlineKeyboardButton(text="🔍 Google it", url=search_url)]])
+            context.user_data['param'] = {'client': chat_session.client, 'message': message,
+                                          'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
+            # get response
+            await bard_response(**context.user_data['param'])
 
         else:  # Claude
             prev_response = ""
@@ -470,6 +477,7 @@ handler_list = [
     CommandHandler('mode', change_mode),
     CommandHandler('model', change_model),
     CommandHandler('temp', change_temperature),
+    CallbackQueryHandler(view_other_drafts),
     MessageHandler(None, recv_msg),
 ]
 for handler in handler_list:
