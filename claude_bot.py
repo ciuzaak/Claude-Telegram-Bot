@@ -186,16 +186,14 @@ async def recv_msg(update: Update, context):
             # get source links
             sources = ""
             if response['factualityQueries']:
-                sources = "\n\nSources - Learn More\n"
-                links = set(item[2][0]
-                            for item in response['factualityQueries'][0] if item[2][0] != '')
-                sources += f"\n".join([f"{i+1}. {val}" for i,
-                                      val in enumerate(links)])
+                links = set(
+                    item[2][0] for item in response['factualityQueries'][0] if item[2][0] != '')
+                sources = "\n\nSources - Learn More\n" + \
+                    '\n'.join([f'{i+1}. {val}' for i, val in enumerate(links)])
 
             # Buttons
-            search_url = "https://www.google.com/search?q=" + (urllib.parse.quote(
-                response['textQuery'][0]) if response['textQuery'] != "" else urllib.parse.quote(input_text))
-            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text="📝 View other drafts", callback_data="drafts"), 
+            search_url = f"https://www.google.com/search?q={urllib.parse.quote(response['textQuery'][0]) if response['textQuery'] != '' else urllib.parse.quote(input_text)}"
+            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text="📝 View other drafts", callback_data="drafts"),
                                             InlineKeyboardButton(text="🔍 Google it", url=search_url)]])
             context.user_data['param'] = {'client': chat_session.client, 'message': message,
                                           'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}

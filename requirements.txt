@@ -2,4 +2,5 @@ wheel
 pyyaml
 requests
 python-telegram-bot[rate-limiter]
+anthropic
 GoogleBard
