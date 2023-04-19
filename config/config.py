@@ -1,7 +1,7 @@
 import yaml
 
 # load yaml config
-with open("config.yml", 'r') as f:
+with open("config/config.yml", 'r') as f:
     config_yaml = yaml.safe_load(f)
 
 # config parameters

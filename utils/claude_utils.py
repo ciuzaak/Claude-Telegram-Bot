@@ -1,5 +1,6 @@
 import anthropic
-import config
+
+from config import config
 
 
 class Claude:

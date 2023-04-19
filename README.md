@@ -27,28 +27,28 @@ If you only have access to one of the models, you can still continue to use this
 
 ## Usage
 
-1. Fill in `config.yml` with reference to `config.example.yml`.
+1. Fill in `config/config.yml` with reference to `config/config.example.yml`.
 
     - [How to obtain telegram bot token](https://core.telegram.org/bots/tutorial#obtain-your-bot-token)
     - [How to obtain telegram user id](https://bigone.zendesk.com/hc/en-us/articles/360008014894-How-to-get-the-Telegram-user-ID-)
 
-2. Run the following command in terminal to create the virtual environment:
+2. Start the bot by:
 
-    ```bash
-    bash setup.sh
-    ```
+    - Scripts:
 
-3. To start running the bot, use the following command:
+        ```bash
+        # create the virtual environment
+        bash scripts/setup.sh
 
-    ```bash
-    bash run.sh
-    ```
+        # start the bot
+        bash scripts/run.sh
+        ```
 
-4. To stop the bot, use the following command:
+    - Docker:
 
-    ```bash
-    bash kill.sh
-    ```
+        ```bash
+        docker-compose up --build
+        ```
 
 ## Acknowledgements
 

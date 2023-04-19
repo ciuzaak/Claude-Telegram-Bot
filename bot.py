@@ -11,11 +11,10 @@ from telegram.constants import ParseMode
 from telegram.ext import (Application, ApplicationBuilder,
                           CallbackQueryHandler, CommandHandler, MessageHandler)
 
-import config
-from bard_utils import Bard
-from claude_utils import Claude
+from config import config
+from utils.bard_utils import Bard
+from utils.claude_utils import Claude
 
-print(f"[+] welcome to chat bot")
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 os.chdir(script_path)
@@ -29,13 +28,10 @@ try:
     with open('fine_granted_identifier.json', 'r') as f:
         fine_granted_identifier = json.load(f)
 except Exception as e:
-    print(f"[!] error loading fine_granted_identifier.json: {e}")
     pass
 
 
 chat_context_container = {}
-
-print("[+] booting bot...")
 
 
 def create_session(mode='claude', id=None):
@@ -69,7 +65,6 @@ def check_should_handle(update: Update, context) -> bool:
         return False
 
     if check_timestamp(update) is False:
-        print(f"[-] Message timestamp is earlier than boot time, ignoring")
         return False
 
     # if mentioning ourself, at the beginning of the message
@@ -86,7 +81,6 @@ def check_should_handle(update: Update, context) -> bool:
                 mention_text = update.message.text[entity.offset:entity.offset + entity.length]
                 if not mention_text == f"@{context.bot.username}":
                     continue
-                print(f"[i] Handling incoming message with reason 'mention'")
                 return True
 
     # if replying to ourself
@@ -97,12 +91,10 @@ def check_should_handle(update: Update, context) -> bool:
         and (update.message.reply_to_message.from_user.id is not None)
         and (update.message.reply_to_message.from_user.id == context.bot.id)
     ):
-        print(f"[i] Handling incoming message with reason 'reply'")
         return True
 
     # if is a private chat
     if update.effective_chat.type == "private":
-        print(f"[i] Handling incoming message with reason 'private chat'")
         return True
 
     return False
@@ -150,7 +142,6 @@ async def bard_response(client, message, markup, sources, choices, index):
         if str(e).startswith("Message is not modified"):
             await message.edit_text(_content + _sources + '\n\\.', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
         else:
-            print(f"[!] error: {e}")
             await message.edit_text(content + sources + '\n\n❌ Markdown failed.', reply_markup=markup)
 
 
@@ -171,7 +162,6 @@ async def recv_msg(update: Update, context):
         '... thinking ...'
     )
     if message is None:
-        print("[!] failed to send message")
         return
 
     try:
@@ -216,21 +206,19 @@ async def recv_msg(update: Update, context):
                 if str(e).startswith("Message is not modified"):
                     await message.edit_text(_response + '\n\\.', parse_mode=ParseMode.MARKDOWN_V2)
                 else:
-                    print(f"[!] error: {e}")
                     await message.edit_text(response + '\n\n❌ Markdown failed.')
 
     except Exception as e:
-        print(f"[!] error: {e}")
         chat_session.reset()
         await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
 
 # Settings
 async def show_settings(update: Update, context):
-    if not check_should_handle(update, context):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
+        return
+    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -265,10 +253,10 @@ async def show_settings(update: Update, context):
 
 
 async def change_mode(update: Update, context):
-    if not check_should_handle(update, context):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
+        return
+    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -285,10 +273,10 @@ async def change_mode(update: Update, context):
 
 
 async def change_model(update: Update, context):
-    if not check_should_handle(update, context):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
+        return
+    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -312,10 +300,10 @@ async def change_model(update: Update, context):
 
 
 async def change_temperature(update: Update, context):
-    if not check_should_handle(update, context):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
+        return
+    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))

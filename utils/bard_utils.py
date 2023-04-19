@@ -1,5 +1,6 @@
 from Bard import Chatbot
-import config
+
+from config import config
 
 
 class Bard:
