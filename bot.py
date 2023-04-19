@@ -35,18 +35,14 @@ chat_context_container = {}
 
 
 def create_session(mode='claude', id=None):
-    if mode == 'claude':
-        return Claude(id)
-    return Bard(id)
+    mode_to_class = {'claude': Claude, 'bard': Bard}
+    cls = mode_to_class.get(mode.lower(), Claude)
+    return cls(id)
 
 
 def validate_user(update: Update) -> bool:
     identifier = user_identifier(update)
-    if identifier in admin_id:
-        return True
-    if identifier in fine_granted_identifier:
-        return True
-    return False
+    return identifier in admin_id or identifier in fine_granted_identifier
 
 
 def check_timestamp(update: Update) -> bool:
@@ -55,33 +51,19 @@ def check_timestamp(update: Update) -> bool:
     # if is earlier than boot time, ignore
     message_utc_timestamp = update.message.date.timestamp()
     boot_utc_timestamp = boot_time.timestamp()
-    if message_utc_timestamp < boot_utc_timestamp:
-        return False
-    return True
+    return message_utc_timestamp >= boot_utc_timestamp
 
 
 def check_should_handle(update: Update, context) -> bool:
+    if not check_timestamp(update):
+        return False
+
     if update.message is None or update.message.text is None or len(update.message.text) == 0:
         return False
 
-    if check_timestamp(update) is False:
-        return False
-
-    # if mentioning ourself, at the beginning of the message
-    if update.message.entities is not None:
-        for entity in update.message.entities:
-            if (
-                True
-                and (entity.type is not None)
-                and (entity.type == "mention")
-                # and (entity.user is not None)
-                # and (entity.user.id is not None)
-                # and (entity.user.id == context.bot.id)
-            ):
-                mention_text = update.message.text[entity.offset:entity.offset + entity.length]
-                if not mention_text == f"@{context.bot.username}":
-                    continue
-                return True
+    # if is a private chat
+    if update.effective_chat.type == 'private':
+        return True
 
     # if replying to ourself
     if (
@@ -93,22 +75,34 @@ def check_should_handle(update: Update, context) -> bool:
     ):
         return True
 
-    # if is a private chat
-    if update.effective_chat.type == "private":
-        return True
+    # if mentioning ourself, at the beginning of the message
+    if update.message.entities is not None:
+        for entity in update.message.entities:
+            if (
+                True
+                and (entity.type is not None)
+                and (entity.type == 'mention')
+                # and (entity.user is not None)
+                # and (entity.user.id is not None)
+                # and (entity.user.id == context.bot.id)
+            ):
+                mention_text = update.message.text[entity.offset:entity.offset + entity.length]
+                if not mention_text == f'@{context.bot.username}':
+                    continue
+                return True
 
     return False
 
 
 def user_identifier(update: Update) -> str:
-    return f"{update.effective_chat.id}"
+    return f'{update.effective_chat.id}'
 
 
 async def reset_chat(update: Update, context):
+    if not check_timestamp(update):
+        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
-        return
-    if check_timestamp(update) is False:
         return
 
     user_id = user_identifier(update)
@@ -133,16 +127,16 @@ async def bard_response(client, message, markup, sources, choices, index):
     client.choice_id = choices[index]['id']
     content = choices[index]['content'][0]
     _content = re.sub(
-        r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), content).replace('\\*\\*', '*')
+        r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', content).replace('\\*\\*', '*')
     _sources = re.sub(
-        r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), sources)
+        r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', sources)
     try:
-        await message.edit_text(_content + _sources, reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
+        await message.edit_text(f'{_content}{_sources}', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
     except telegram.error.BadRequest as e:
-        if str(e).startswith("Message is not modified"):
-            await message.edit_text(_content + _sources + '\n\\.', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
+        if str(e).startswith('Message is not modified'):
+            await message.edit_text(f'{_content}{_sources}\n\\.', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
         else:
-            await message.edit_text(content + sources + '\n\n❌ Markdown failed.', reply_markup=markup)
+            await message.edit_text(f'{content}{sources}\n\n❌ Markdown failed.', reply_markup=markup)
 
 
 # reply. Stream chat for claude
@@ -167,31 +161,31 @@ async def recv_msg(update: Update, context):
     try:
         input_text = update.message.text
         # remove bot name from text with @
-        pattern = f"@{context.bot.username}"
+        pattern = f'@{context.bot.username}'
         input_text = input_text.replace(pattern, '')
         current_mode = chat_session.get_mode()
 
         if current_mode == 'bard':
             response = chat_session.send_message(input_text)
             # get source links
-            sources = ""
+            sources = ''
             if response['factualityQueries']:
                 links = set(
                     item[2][0] for item in response['factualityQueries'][0] if item[2][0] != '')
-                sources = "\n\nSources - Learn More\n" + \
+                sources = '\n\nSources - Learn More\n' + \
                     '\n'.join([f'{i+1}. {val}' for i, val in enumerate(links)])
 
             # Buttons
             search_url = f"https://www.google.com/search?q={urllib.parse.quote(response['textQuery'][0]) if response['textQuery'] != '' else urllib.parse.quote(input_text)}"
-            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text="📝 View other drafts", callback_data="drafts"),
-                                            InlineKeyboardButton(text="🔍 Google it", url=search_url)]])
+            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data='drafts'),
+                                            InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
             context.user_data['param'] = {'client': chat_session.client, 'message': message,
                                           'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
             # get response
             await bard_response(**context.user_data['param'])
 
         else:  # Claude
-            prev_response = ""
+            prev_response = ''
             for response in chat_session.send_message_stream(input_text):
                 if abs(len(response) - len(prev_response)) < 100:
                     continue
@@ -199,14 +193,14 @@ async def recv_msg(update: Update, context):
                 await message.edit_text(response)
 
             _response = re.sub(
-                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: '\\' + x.group(0), response)
+                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', response)
             try:
                 await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
             except telegram.error.BadRequest as e:
-                if str(e).startswith("Message is not modified"):
-                    await message.edit_text(_response + '\n\\.', parse_mode=ParseMode.MARKDOWN_V2)
+                if str(e).startswith('Message is not modified'):
+                    await message.edit_text(f'{_response}\n\\.', parse_mode=ParseMode.MARKDOWN_V2)
                 else:
-                    await message.edit_text(response + '\n\n❌ Markdown failed.')
+                    await message.edit_text(f'{response}\n\n❌ Markdown failed.')
 
     except Exception as e:
         chat_session.reset()
@@ -215,10 +209,10 @@ async def recv_msg(update: Update, context):
 
 # Settings
 async def show_settings(update: Update, context):
+    if not check_timestamp(update):
+        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
-        return
-    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -253,10 +247,10 @@ async def show_settings(update: Update, context):
 
 
 async def change_mode(update: Update, context):
+    if not check_timestamp(update):
+        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
-        return
-    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -268,15 +262,15 @@ async def change_mode(update: Update, context):
     final_mode = 'bard' if current_mode == 'claude' else 'claude'
     chat_session = create_session(mode=final_mode, id=user_identifier(update))
     chat_context_container[user_identifier(update)] = chat_session
-    await update.message.reply_text(f"✅ Mode has been switched to {final_mode}.")
+    await update.message.reply_text(f'✅ Mode has been switched to {final_mode}.')
     await show_settings(update, context)
 
 
 async def change_model(update: Update, context):
+    if not check_timestamp(update):
+        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
-        return
-    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -293,17 +287,17 @@ async def change_model(update: Update, context):
         return
     model = context.args[0].strip()
     if not chat_session.change_model(model):
-        await update.message.reply_text("❌ Invalid model name.")
+        await update.message.reply_text('❌ Invalid model name.')
         return
-    await update.message.reply_text(f"✅ Model has been switched to {model}.")
+    await update.message.reply_text(f'✅ Model has been switched to {model}.')
     await show_settings(update, context)
 
 
 async def change_temperature(update: Update, context):
+    if not check_timestamp(update):
+        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
-        return
-    if check_timestamp(update) is False:
         return
 
     chat_session = chat_context_container.get(user_identifier(update))
@@ -320,14 +314,14 @@ async def change_temperature(update: Update, context):
         return
     temperature = context.args[0].strip()
     if not chat_session.change_temperature(temperature):
-        await update.message.reply_text("❌ Invalid temperature value.")
+        await update.message.reply_text('❌ Invalid temperature value.')
         return
-    await update.message.reply_text(f"✅ Temperature has been set to {temperature}.")
+    await update.message.reply_text(f'✅ Temperature has been set to {temperature}.')
     await show_settings(update, context)
 
 
 async def start_bot(update: Update, context):
-    if check_timestamp(update) is False:
+    if not check_timestamp(update):
         return
     id = user_identifier(update)
     welcome_strs = [
@@ -349,19 +343,19 @@ async def start_bot(update: Update, context):
             '• /reboot to clear all chat history',
         ]
         welcome_strs.extend(extra)
-    print(f"[i] {update.effective_user.username} started the bot")
+    print(f'[i] {update.effective_user.username} started the bot')
     await update.message.reply_text('\n'.join(welcome_strs), parse_mode=ParseMode.HTML)
 
 
 async def send_id(update: Update, context):
-    if check_timestamp(update) is False:
+    if not check_timestamp(update):
         return
     current_identifier = user_identifier(update)
     await update.message.reply_text(f'Your chat identifier is {current_identifier}, send it to the bot admin to get fine-granted access.')
 
 
 async def grant(update: Update, context):
-    if check_timestamp(update) is False:
+    if not check_timestamp(update):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
@@ -381,7 +375,7 @@ async def grant(update: Update, context):
 
 
 async def ban(update: Update, context):
-    if check_timestamp(update) is False:
+    if not check_timestamp(update):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
@@ -401,7 +395,7 @@ async def ban(update: Update, context):
 
 
 async def status(update: Update, context):
-    if check_timestamp(update) is False:
+    if not check_timestamp(update):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
@@ -427,7 +421,7 @@ async def status(update: Update, context):
 
 
 async def reboot(update: Update, context):
-    if check_timestamp(update) is False:
+    if not check_timestamp(update):
         return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
@@ -447,7 +441,7 @@ async def post_init(application: Application):
 
 boot_time = datetime.datetime.now()
 
-print(f"[+] bot started at {boot_time}, calling loop!")
+print(f'[+] bot started at {boot_time}, calling loop!')
 application = ApplicationBuilder().token(token).post_init(post_init).build()
 
 handler_list = [
