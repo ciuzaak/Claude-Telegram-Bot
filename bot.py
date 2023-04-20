@@ -4,7 +4,6 @@ import os
 import re
 import urllib.parse
 
-import telegram
 from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
                       Update)
 from telegram.constants import ParseMode
@@ -14,7 +13,6 @@ from telegram.ext import (Application, ApplicationBuilder,
 from config import config
 from utils.bard_utils import Bard
 from utils.claude_utils import Claude
-
 
 script_path = os.path.dirname(os.path.realpath(__file__))
 os.chdir(script_path)
@@ -123,8 +121,8 @@ async def view_other_drafts(update: Update, context):
 
 
 # Google bard: response
-async def bard_response(client, message, markup, sources, choices, index):
-    client.choice_id = choices[index]['id']
+async def bard_response(chat_session, message, markup, sources, choices, index):
+    chat_session.client.choice_id = choices[index]['id']
     content = choices[index]['content'][0]
     _content = re.sub(
         r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', content).replace('\\*\\*', '*')
@@ -132,11 +130,16 @@ async def bard_response(client, message, markup, sources, choices, index):
         r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', sources)
     try:
         await message.edit_text(f'{_content}{_sources}', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
-    except telegram.error.BadRequest as e:
+    except Exception as e:
         if str(e).startswith('Message is not modified'):
-            await message.edit_text(f'{_content}{_sources}\n\\.', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
+            await message.edit_text(f'{_content}{_sources}\\.', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
+        elif str(e).startswith("Can't parse entities"):
+            await message.edit_text(f'{content}{sources}', reply_markup=markup)
+        elif str(e).startswith('Message is too long'):
+            await message.edit_text(content[:4096], reply_markup=markup)
         else:
-            await message.edit_text(f'{content}{sources}\n\n❌ Markdown failed.', reply_markup=markup)
+            chat_session.reset()
+            await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
 
 # reply. Stream chat for claude
@@ -165,7 +168,30 @@ async def recv_msg(update: Update, context):
         input_text = input_text.replace(pattern, '')
         current_mode = chat_session.get_mode()
 
-        if current_mode == 'bard':
+        if current_mode == 'claude':
+            prev_response = ''
+            for response in chat_session.send_message_stream(input_text):
+                if abs(len(response) - len(prev_response)) < 100:
+                    continue
+                prev_response = response
+                await message.edit_text(response)
+
+            _response = re.sub(
+                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', response)
+            try:
+                await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
+            except Exception as e:
+                if str(e).startswith('Message is not modified'):
+                    await message.edit_text(f'{_response}\\.', parse_mode=ParseMode.MARKDOWN_V2)
+                elif str(e).startswith("Can't parse entities"):
+                    await message.edit_text(response)
+                elif str(e).startswith('Message is too long'):
+                    await message.edit_text(response[:4096])
+                else:
+                    chat_session.reset()
+                    await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
+
+        elif current_mode == 'bard':
             response = chat_session.send_message(input_text)
             # get source links
             sources = ''
@@ -179,28 +205,10 @@ async def recv_msg(update: Update, context):
             search_url = f"https://www.google.com/search?q={urllib.parse.quote(response['textQuery'][0]) if response['textQuery'] != '' else urllib.parse.quote(input_text)}"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data='drafts'),
                                             InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
-            context.user_data['param'] = {'client': chat_session.client, 'message': message,
+            context.user_data['param'] = {'chat_session': chat_session, 'message': message,
                                           'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
             # get response
             await bard_response(**context.user_data['param'])
-
-        else:  # Claude
-            prev_response = ''
-            for response in chat_session.send_message_stream(input_text):
-                if abs(len(response) - len(prev_response)) < 100:
-                    continue
-                prev_response = response
-                await message.edit_text(response)
-
-            _response = re.sub(
-                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', response)
-            try:
-                await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
-            except telegram.error.BadRequest as e:
-                if str(e).startswith('Message is not modified'):
-                    await message.edit_text(f'{_response}\n\\.', parse_mode=ParseMode.MARKDOWN_V2)
-                else:
-                    await message.edit_text(f'{response}\n\n❌ Markdown failed.')
 
     except Exception as e:
         chat_session.reset()
@@ -224,13 +232,8 @@ async def show_settings(update: Update, context):
     infos = [
         f'<b>Current mode:</b> {current_mode}',
     ]
-    if current_mode == 'bard':
-        extras = [
-            '',
-            'Commands:',
-            '• /mode to use Anthropic Claude',
-        ]
-    else:  # Claude
+    extras = []
+    if current_mode == 'claude':
         current_model, current_temperature = chat_session.get_settings()
         extras = [
             f'<b>Current model:</b> {current_model}',
@@ -241,6 +244,12 @@ async def show_settings(update: Update, context):
             '• [/model NAME] to change model',
             '• [/temp VALUE] to set temperature',
             "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>",
+        ]
+    elif current_mode == 'bard':
+        extras = [
+            '',
+            'Commands:',
+            '• /mode to use Anthropic Claude',
         ]
     infos.extend(extras)
     await update.message.reply_text('\n'.join(infos), parse_mode=ParseMode.HTML)
