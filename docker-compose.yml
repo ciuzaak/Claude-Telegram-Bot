@@ -1,10 +1,9 @@
-version: "3"
-
+version: '3'
 services:
-  claude_telegram_bot:
-    container_name: claude_telegram_bot
-    command: python3 bot.py
-    restart: always
+  claude-telegram-bot:
     build:
-      context: "."
+      context: .
       dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    restart: unless-stopped
