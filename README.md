@@ -59,7 +59,3 @@ The client library for Claude API is [anthropics's anthropic-sdk-python](https:/
 The client library for Bard API is [acheong08's Bard](https://github.com/acheong08/Bard).
 
 Huge thanks to them!!! 🥰🥰🥰
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=ciuzaak/Claude-Telegram-Bot&type=Date)](https://star-history.com/#ciuzaak/Claude-Telegram-Bot&Date)
