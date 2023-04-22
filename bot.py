@@ -78,9 +78,17 @@ def user_identifier(update: Update) -> str:
     return f'{update.effective_chat.id}'
 
 
+def get_chat_session(update: Update, context):
+    chat_session = chat_context_container.get(user_identifier(update))
+    if chat_session is None:
+        chat_session = Claude(id=user_identifier(update))
+        context.chat_data['claude'] = {}
+        chat_context_container[user_identifier(update)] = chat_session
+    return chat_session
+
+
 async def reset_chat(update: Update, context):
     if not validate_user(update):
-        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
 
     user_id = user_identifier(update)
@@ -124,17 +132,11 @@ async def bard_response(chat_session, message, markup, sources, choices, index):
 
 # reply. Stream chat for claude
 async def recv_msg(update: Update, context):
+    if not validate_user(update):
+        return
     if not check_should_handle(update, context):
         return
-    if not validate_user(update):
-        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
-        return
-
-    chat_session = chat_context_container.get(user_identifier(update))
-    if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
-        context.chat_data['claude'] = {}
-        chat_context_container[user_identifier(update)] = chat_session
+    chat_session = get_chat_session(update, context)
 
     message = await update.message.reply_text('.')
     if message is None:
@@ -198,14 +200,8 @@ async def recv_msg(update: Update, context):
 # Settings
 async def show_settings(update: Update, context):
     if not validate_user(update):
-        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
-
-    chat_session = chat_context_container.get(user_identifier(update))
-    if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
-        context.chat_data['claude'] = {}
-        chat_context_container[user_identifier(update)] = chat_session
+    chat_session = get_chat_session(update, context)
 
     current_mode = chat_session.mode
     infos = [
@@ -237,14 +233,8 @@ async def show_settings(update: Update, context):
 
 async def change_mode(update: Update, context):
     if not validate_user(update):
-        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
-
-    chat_session = chat_context_container.get(user_identifier(update))
-    if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
-        context.chat_data['claude'] = {}
-        chat_context_container[user_identifier(update)] = chat_session
+    chat_session = get_chat_session(update, context)
 
     final_mode = 'bard' if chat_session.mode == 'claude' else 'claude'
     chat_session = Claude(id=user_identifier(
@@ -256,14 +246,8 @@ async def change_mode(update: Update, context):
 
 async def change_model(update: Update, context):
     if not validate_user(update):
-        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
-
-    chat_session = chat_context_container.get(user_identifier(update))
-    if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
-        context.chat_data['claude'] = {}
-        chat_context_container[user_identifier(update)] = chat_session
+    chat_session = get_chat_session(update, context)
 
     if chat_session.mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
@@ -283,14 +267,8 @@ async def change_model(update: Update, context):
 
 async def change_temperature(update: Update, context):
     if not validate_user(update):
-        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
-
-    chat_session = chat_context_container.get(user_identifier(update))
-    if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
-        context.chat_data['claude'] = {}
-        chat_context_container[user_identifier(update)] = chat_session
+    chat_session = get_chat_session(update, context)
 
     if chat_session.mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
@@ -310,14 +288,8 @@ async def change_temperature(update: Update, context):
 
 async def change_cutoff(update: Update, context):
     if not validate_user(update):
-        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
-
-    chat_session = chat_context_container.get(user_identifier(update))
-    if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
-        context.chat_data['claude'] = {}
-        chat_context_container[user_identifier(update)] = chat_session
+    chat_session = get_chat_session(update, context)
 
     if chat_session.mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
