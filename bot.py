@@ -32,12 +32,6 @@ except Exception as e:
 chat_context_container = {}
 
 
-def create_session(mode='claude', id=None):
-    mode_to_class = {'claude': Claude, 'bard': Bard}
-    cls = mode_to_class.get(mode.lower(), Claude)
-    return cls(id)
-
-
 def validate_user(update: Update) -> bool:
     identifier = user_identifier(update)
     return identifier in admin_id or identifier in fine_granted_identifier
@@ -115,9 +109,9 @@ async def reset_chat(update: Update, context):
 async def view_other_drafts(update: Update, context):
     if update.callback_query.data == 'drafts':
         # increase choice index
-        context.user_data['param']['index'] = (
-            context.user_data['param']['index'] + 1) % len(context.user_data['param']['choices'])
-        await bard_response(**context.user_data['param'])
+        context.chat_data['bard']['index'] = (
+            context.chat_data['bard']['index'] + 1) % len(context.chat_data['bard']['choices'])
+        await bard_response(**context.chat_data['bard'])
 
 
 # Google bard: response
@@ -152,12 +146,11 @@ async def recv_msg(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = create_session(id=user_identifier(update))
+        chat_session = Claude(id=user_identifier(update))
+        context.chat_data['claude'] = {}
         chat_context_container[user_identifier(update)] = chat_session
 
-    message = await update.message.reply_text(
-        '... thinking ...'
-    )
+    message = await update.message.reply_text('.')
     if message is None:
         return
 
@@ -166,12 +159,12 @@ async def recv_msg(update: Update, context):
         # remove bot name from text with @
         pattern = f'@{context.bot.username}'
         input_text = input_text.replace(pattern, '')
-        current_mode = chat_session.get_mode()
 
-        if current_mode == 'claude':
+        if chat_session.mode == 'claude':
+            cutoff = chat_session.cutoff
             prev_response = ''
             for response in chat_session.send_message_stream(input_text):
-                if abs(len(response) - len(prev_response)) < 100:
+                if abs(len(response) - len(prev_response)) < cutoff:
                     continue
                 prev_response = response
                 await message.edit_text(response)
@@ -191,7 +184,7 @@ async def recv_msg(update: Update, context):
                     chat_session.reset()
                     await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
-        elif current_mode == 'bard':
+        else:  # Bard
             response = chat_session.send_message(input_text)
             # get source links
             sources = ''
@@ -205,10 +198,10 @@ async def recv_msg(update: Update, context):
             search_url = f"https://www.google.com/search?q={urllib.parse.quote(response['textQuery'][0]) if response['textQuery'] != '' else urllib.parse.quote(input_text)}"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data='drafts'),
                                             InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
-            context.user_data['param'] = {'chat_session': chat_session, 'message': message,
-                                          'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
+            context.chat_data['bard'] = {'chat_session': chat_session, 'message': message,
+                                         'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
             # get response
-            await bard_response(**context.user_data['param'])
+            await bard_response(**context.chat_data['bard'])
 
     except Exception as e:
         chat_session.reset()
@@ -225,27 +218,29 @@ async def show_settings(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = create_session(id=user_identifier(update))
+        chat_session = Claude(id=user_identifier(update))
+        context.chat_data['claude'] = {}
         chat_context_container[user_identifier(update)] = chat_session
 
-    current_mode = chat_session.get_mode()
+    current_mode = chat_session.mode
     infos = [
         f'<b>Current mode:</b> {current_mode}',
     ]
     extras = []
     if current_mode == 'claude':
-        current_model, current_temperature = chat_session.get_settings()
         extras = [
-            f'<b>Current model:</b> {current_model}',
-            f'<b>Current temperature:</b> {current_temperature}',
+            f'<b>Current model:</b> {chat_session.model}',
+            f'<b>Current temperature:</b> {chat_session.temperature}',
+            f'<b>Current cutoff:</b> {chat_session.cutoff}',
             '',
             'Commands:',
             '• /mode to use Google Bard',
             '• [/model NAME] to change model',
             '• [/temp VALUE] to set temperature',
+            '• [/cutoff VALUE] to adjust cutoff',
             "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>",
         ]
-    elif current_mode == 'bard':
+    else:  # Bard
         extras = [
             '',
             'Commands:',
@@ -264,12 +259,13 @@ async def change_mode(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = create_session(id=user_identifier(update))
+        chat_session = Claude(id=user_identifier(update))
+        context.chat_data['claude'] = {}
         chat_context_container[user_identifier(update)] = chat_session
 
-    current_mode = chat_session.get_mode()
-    final_mode = 'bard' if current_mode == 'claude' else 'claude'
-    chat_session = create_session(mode=final_mode, id=user_identifier(update))
+    final_mode = 'bard' if chat_session.mode == 'claude' else 'claude'
+    chat_session = Claude(id=user_identifier(
+        update), **context.chat_data['claude']) if final_mode == 'claude' else Bard(id=user_identifier(update))
     chat_context_container[user_identifier(update)] = chat_session
     await update.message.reply_text(f'✅ Mode has been switched to {final_mode}.')
     await show_settings(update, context)
@@ -284,10 +280,11 @@ async def change_model(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = create_session(id=user_identifier(update))
+        chat_session = Claude(id=user_identifier(update))
+        context.chat_data['claude'] = {}
         chat_context_container[user_identifier(update)] = chat_session
 
-    if chat_session.get_mode() == 'bard':
+    if chat_session.mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
@@ -298,6 +295,7 @@ async def change_model(update: Update, context):
     if not chat_session.change_model(model):
         await update.message.reply_text('❌ Invalid model name.')
         return
+    context.chat_data['claude']['model'] = model
     await update.message.reply_text(f'✅ Model has been switched to {model}.')
     await show_settings(update, context)
 
@@ -311,10 +309,11 @@ async def change_temperature(update: Update, context):
 
     chat_session = chat_context_container.get(user_identifier(update))
     if chat_session is None:
-        chat_session = create_session(id=user_identifier(update))
+        chat_session = Claude(id=user_identifier(update))
+        context.chat_data['claude'] = {}
         chat_context_container[user_identifier(update)] = chat_session
 
-    if chat_session.get_mode() == 'bard':
+    if chat_session.mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
@@ -325,7 +324,37 @@ async def change_temperature(update: Update, context):
     if not chat_session.change_temperature(temperature):
         await update.message.reply_text('❌ Invalid temperature value.')
         return
+    context.chat_data['claude']['temperature'] = float(temperature)
     await update.message.reply_text(f'✅ Temperature has been set to {temperature}.')
+    await show_settings(update, context)
+
+
+async def change_cutoff(update: Update, context):
+    if not check_timestamp(update):
+        return
+    if not validate_user(update):
+        await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
+        return
+
+    chat_session = chat_context_container.get(user_identifier(update))
+    if chat_session is None:
+        chat_session = Claude(id=user_identifier(update))
+        context.chat_data['claude'] = {}
+        chat_context_container[user_identifier(update)] = chat_session
+
+    if chat_session.mode == 'bard':
+        await update.message.reply_text('❌ Invalid option for Google Bard.')
+        return
+
+    if len(context.args) != 1:
+        await update.message.reply_text('❌ Please provide a cutoff value.')
+        return
+    cutoff = context.args[0].strip()
+    if not chat_session.change_cutoff(cutoff):
+        await update.message.reply_text('❌ Invalid cutoff value.')
+        return
+    context.chat_data['claude']['cutoff'] = int(cutoff)
+    await update.message.reply_text(f'✅ Cutoff has been set to {cutoff}.')
     await show_settings(update, context)
 
 
@@ -466,6 +495,7 @@ handler_list = [
     CommandHandler('mode', change_mode),
     CommandHandler('model', change_model),
     CommandHandler('temp', change_temperature),
+    CommandHandler('cutoff', change_cutoff),
     CallbackQueryHandler(view_other_drafts),
     MessageHandler(None, recv_msg),
 ]

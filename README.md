@@ -12,12 +12,12 @@ If you only have access to one of the models, you can still continue to use this
 
 ## Features
 
-- Support of [official Claude API](https://console.anthropic.com/account/keys) and [reverse engineered Bard API](https://github.com/acheong08/Bard)
+- Support of [official Claude API](https://console.anthropic.com/account/keys) and [reverse engineered Bard API](https://github.com/acheong08/Bard) *(command: `/mode` to switch between them)*
+- Claude's streaming output *(command: `/cutoff` to adjust the frequency of streaming, defaults to 100)*
+- Modify [Claude's model (defaults to v1.3) and temperature (defaults to 1)](https://console.anthropic.com/docs/api/reference) *(commands: `/model` and `/temp`)*
+- Show reference links and Google search keywords from Bard's answers *(button: `🔍 Google it`)*
+- Switch between different drafts provided by Bard's answers *(button: `📝 View other drafts`)*
 - Support of partial Markdown
-- Claude's streaming output
-- Modify [Claude's model (defaults to v1.3) and temperature (defaults to 1)](https://console.anthropic.com/docs/api/reference)
-- Show reference links and Google search keywords from Bard's answers
-- Switch between different drafts provided by Bard's answers
 - [Private chat, group chat, invitation mode, independent chat session](https://github.com/Lakr233/ChatBot-TGLM6B)
 
 |                             Claude                             |                            Bard                            |

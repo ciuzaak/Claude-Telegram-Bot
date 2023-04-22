@@ -4,10 +4,11 @@ from config import config
 
 
 class Claude:
-    def __init__(self, id=None) -> None:
+    def __init__(self, id=None, model='claude-v1.3', temperature=1., cutoff=100) -> None:
         self.mode = 'claude'
-        self.model = 'claude-v1.3'
-        self.temperature = 1.
+        self.model = model
+        self.temperature = temperature
+        self.cutoff = cutoff
         self.max_tokens_to_sample = 9216
         self.stop_sequences = [anthropic.HUMAN_PROMPT]
         self.client = anthropic.Client(config.claude_api)
@@ -18,12 +19,6 @@ class Claude:
         self.prompt = ''
         self.max_tokens_to_sample = 9216
 
-    def get_mode(self):
-        return self.mode
-
-    def get_settings(self):
-        return self.model, self.temperature
-
     def change_model(self, model):
         valid_models = {'claude-v1', 'claude-v1.0', 'claude-v1.2',
                         'claude-v1.3', 'claude-instant-v1', 'claude-instant-v1.0'}
@@ -33,14 +28,22 @@ class Claude:
         return False
 
     def change_temperature(self, temperature):
-        if not isinstance(temperature, float):
-            try:
-                temperature = float(temperature)
-            except ValueError:
-                return False
-
+        try:
+            temperature = float(temperature)
+        except ValueError:
+            return False
         if 0 <= temperature <= 1:
             self.temperature = temperature
+            return True
+        return False
+
+    def change_cutoff(self, cutoff):
+        try:
+            cutoff = int(cutoff)
+        except ValueError:
+            return False
+        if cutoff > 0:
+            self.cutoff = cutoff
             return True
         return False
 

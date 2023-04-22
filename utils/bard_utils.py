@@ -14,8 +14,5 @@ class Bard:
         self.client.response_id = ''
         self.client.choice_id = ''
 
-    def get_mode(self):
-        return self.mode
-
     def send_message(self, message):
         return self.client.ask(message)
