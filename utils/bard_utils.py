@@ -13,6 +13,3 @@ class Bard:
         self.client.conversation_id = ''
         self.client.response_id = ''
         self.client.choice_id = ''
-
-    def send_message(self, message):
-        return self.client.ask(message)

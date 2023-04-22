@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import os
@@ -185,7 +186,8 @@ async def recv_msg(update: Update, context):
                     await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
         else:  # Bard
-            response = chat_session.send_message(input_text)
+            loop = asyncio.get_event_loop()  # asynchronous
+            response = await loop.run_in_executor(None, chat_session.client.ask, input_text)
             # get source links
             sources = ''
             if response['factualityQueries']:
