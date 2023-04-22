@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import json
 import os
 import re
@@ -38,19 +37,7 @@ def validate_user(update: Update) -> bool:
     return identifier in admin_id or identifier in fine_granted_identifier
 
 
-def check_timestamp(update: Update) -> bool:
-    # check timestamp
-    global boot_time
-    # if is earlier than boot time, ignore
-    message_utc_timestamp = update.message.date.timestamp()
-    boot_utc_timestamp = boot_time.timestamp()
-    return message_utc_timestamp >= boot_utc_timestamp
-
-
 def check_should_handle(update: Update, context) -> bool:
-    if not check_timestamp(update):
-        return False
-
     if update.message is None or update.message.text is None or len(update.message.text) == 0:
         return False
 
@@ -92,8 +79,6 @@ def user_identifier(update: Update) -> str:
 
 
 async def reset_chat(update: Update, context):
-    if not check_timestamp(update):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
@@ -212,8 +197,6 @@ async def recv_msg(update: Update, context):
 
 # Settings
 async def show_settings(update: Update, context):
-    if not check_timestamp(update):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
@@ -253,8 +236,6 @@ async def show_settings(update: Update, context):
 
 
 async def change_mode(update: Update, context):
-    if not check_timestamp(update):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
@@ -274,8 +255,6 @@ async def change_mode(update: Update, context):
 
 
 async def change_model(update: Update, context):
-    if not check_timestamp(update):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
@@ -303,8 +282,6 @@ async def change_model(update: Update, context):
 
 
 async def change_temperature(update: Update, context):
-    if not check_timestamp(update):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
@@ -332,8 +309,6 @@ async def change_temperature(update: Update, context):
 
 
 async def change_cutoff(update: Update, context):
-    if not check_timestamp(update):
-        return
     if not validate_user(update):
         await update.message.reply_text('❌ Sadly, you are not allowed to use this bot at this time.')
         return
@@ -361,8 +336,6 @@ async def change_cutoff(update: Update, context):
 
 
 async def start_bot(update: Update, context):
-    if not check_timestamp(update):
-        return
     id = user_identifier(update)
     welcome_strs = [
         'Welcome to <b>Claude & Bard Telegram Bot</b>',
@@ -388,15 +361,11 @@ async def start_bot(update: Update, context):
 
 
 async def send_id(update: Update, context):
-    if not check_timestamp(update):
-        return
     current_identifier = user_identifier(update)
     await update.message.reply_text(f'Your chat identifier is {current_identifier}, send it to the bot admin to get fine-granted access.')
 
 
 async def grant(update: Update, context):
-    if not check_timestamp(update):
-        return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
         await update.message.reply_text('❌ You are not admin!')
@@ -415,8 +384,6 @@ async def grant(update: Update, context):
 
 
 async def ban(update: Update, context):
-    if not check_timestamp(update):
-        return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
         await update.message.reply_text('❌ You are not admin!')
@@ -435,15 +402,12 @@ async def ban(update: Update, context):
 
 
 async def status(update: Update, context):
-    if not check_timestamp(update):
-        return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
         await update.message.reply_text('❌ You are not admin!')
         return
     report = [
         'Status Report:',
-        f'[+] bot started at {boot_time}',
         f'[+] admin users: {admin_id}',
         f'[+] fine-granted users: {len(fine_granted_identifier)}',
         f'[+] chat sessions: {len(chat_context_container)}',
@@ -461,8 +425,6 @@ async def status(update: Update, context):
 
 
 async def reboot(update: Update, context):
-    if not check_timestamp(update):
-        return
     current_identifier = user_identifier(update)
     if current_identifier not in admin_id:
         await update.message.reply_text('❌ You are not admin!')
@@ -483,9 +445,8 @@ async def post_init(application: Application):
         BotCommand('/help', 'Get help message'),
     ])
 
-boot_time = datetime.datetime.now()
 
-print(f'[+] bot started at {boot_time}, calling loop!')
+print(f'[+] bot started, calling loop!')
 application = ApplicationBuilder().token(token).post_init(
     post_init).concurrent_updates(True).build()
 
@@ -510,4 +471,4 @@ for handler in handler_list:
     application.add_handler(handler)
 application.add_error_handler(error_handler)
 
-application.run_polling()
+application.run_polling(drop_pending_updates=True)
