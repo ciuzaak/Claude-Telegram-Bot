@@ -480,7 +480,8 @@ async def post_init(application: Application):
 boot_time = datetime.datetime.now()
 
 print(f'[+] bot started at {boot_time}, calling loop!')
-application = ApplicationBuilder().token(token).post_init(post_init).build()
+application = ApplicationBuilder().token(token).post_init(
+    post_init).concurrent_updates(True).build()
 
 handler_list = [
     CommandHandler('id', send_id),
