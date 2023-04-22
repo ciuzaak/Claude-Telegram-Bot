@@ -469,6 +469,10 @@ async def reboot(update: Update, context):
     await update.message.reply_text('✅ All chat history has been cleared!')
 
 
+async def error_handler(update: Update, context):
+    print(f'[e] Exception while handling an update: {context.error}')
+
+
 async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand('/reset', 'Reset the chat history'),
@@ -480,7 +484,8 @@ async def post_init(application: Application):
 boot_time = datetime.datetime.now()
 
 print(f'[+] bot started at {boot_time}, calling loop!')
-application = ApplicationBuilder().token(token).post_init(post_init).build()
+application = ApplicationBuilder().token(token).post_init(
+    post_init).concurrent_updates(True).build()
 
 handler_list = [
     CommandHandler('id', send_id),
@@ -501,5 +506,6 @@ handler_list = [
 ]
 for handler in handler_list:
     application.add_handler(handler)
+application.add_error_handler(error_handler)
 
 application.run_polling()
