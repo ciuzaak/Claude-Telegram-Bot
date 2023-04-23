@@ -4,7 +4,7 @@ from config import config
 
 
 class Claude:
-    def __init__(self, id=None, model='claude-v1.3', temperature=1., cutoff=100) -> None:
+    def __init__(self, id=None, model='claude-v1.3', temperature=1., cutoff=50) -> None:
         self.mode = 'claude'
         self.model = model
         self.temperature = temperature

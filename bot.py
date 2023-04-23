@@ -14,8 +14,6 @@ from config import config
 from utils.bard_utils import Bard
 from utils.claude_utils import Claude
 
-script_path = os.path.dirname(os.path.realpath(__file__))
-os.chdir(script_path)
 
 token = config.telegram_token
 admin_id = config.telegram_username
@@ -126,6 +124,7 @@ async def bard_response(chat_session, message, markup, sources, choices, index):
         elif str(e).startswith('Message is too long'):
             await message.edit_text(content[:4096], reply_markup=markup)
         else:
+            print(f'[e] {e}')
             chat_session.reset()
             await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
@@ -169,6 +168,7 @@ async def recv_msg(update: Update, context):
                 elif str(e).startswith('Message is too long'):
                     await message.edit_text(response[:4096])
                 else:
+                    print(f'[e] {e}')
                     chat_session.reset()
                     await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
@@ -193,6 +193,7 @@ async def recv_msg(update: Update, context):
             await bard_response(**context.chat_data['bard'])
 
     except Exception as e:
+        print(f'[e] {e}')
         chat_session.reset()
         await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
 
@@ -406,7 +407,7 @@ async def reboot(update: Update, context):
 
 
 async def error_handler(update: Update, context):
-    print(f'[e] Exception while handling an update: {context.error}')
+    print(f'[e] {context.error}')
 
 
 async def post_init(application: Application):
