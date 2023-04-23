@@ -1,7 +1,7 @@
 telegram:
-  token: 'TELEGRAM BOT TOKEN'
-  username: 'TELEGRAM USER ID'
+  token: 'TELEGRAM_BOT_TOKEN'
+  username: ['TELEGRAM_USER_ID_1', ..., 'TELEGRAM_USER_ID_N']
 claude:
-  api: 'CLAUDE SECRET KEY'
+  api: 'CLAUDE_SECRET_KEY'
 bard:
-  api: 'BARD SECRET KEY'
+  api: 'BARD_SECRET_KEY'
