@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import re
 import urllib.parse
 
@@ -14,19 +13,15 @@ from config import config
 from utils.bard_utils import Bard
 from utils.claude_utils import Claude
 
-
 token = config.telegram_token
 admin_id = config.telegram_username
 fine_granted_identifier = []
-
 # load from fine_granted_identifier.json if exists
 try:
     with open('fine_granted_identifier.json', 'r') as f:
         fine_granted_identifier = json.load(f)
 except Exception as e:
     pass
-
-
 chat_context_container = {}
 
 
@@ -77,11 +72,12 @@ def user_identifier(update: Update) -> str:
 
 
 def get_chat_session(update: Update, context):
-    chat_session = chat_context_container.get(user_identifier(update))
+    user_id = user_identifier(update)
+    chat_session = chat_context_container.get(user_id)
     if chat_session is None:
-        chat_session = Claude(id=user_identifier(update))
+        chat_session = Claude(id=user_id)
         context.chat_data['claude'] = {}
-        chat_context_container[user_identifier(update)] = chat_session
+        chat_context_container[user_id] = chat_session
     return chat_session
 
 
@@ -237,10 +233,11 @@ async def change_mode(update: Update, context):
         return
     chat_session = get_chat_session(update, context)
 
+    user_id = user_identifier(update)
     final_mode = 'bard' if chat_session.mode == 'claude' else 'claude'
-    chat_session = Claude(id=user_identifier(
-        update), **context.chat_data['claude']) if final_mode == 'claude' else Bard(id=user_identifier(update))
-    chat_context_container[user_identifier(update)] = chat_session
+    chat_session = Claude(
+        id=user_id, **context.chat_data['claude']) if final_mode == 'claude' else Bard(id=user_id)
+    chat_context_container[user_id] = chat_session
     await update.message.reply_text(f'✅ Mode has been switched to {final_mode}.')
     await show_settings(update, context)
 
