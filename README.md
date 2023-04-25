@@ -1,6 +1,6 @@
 # Claude & Bard Telegram Bot
 
-This is a Telegram bot that intereact with **Anthropic Claude** and **Google Bard**.
+This is a Telegram bot that intereacts with **Anthropic Claude** and **Google Bard**.
 
 Before using this bot, you need to apply for access credentials for Claude and Bard respectively:
 
@@ -20,10 +20,10 @@ If you only have access to one of the models, you can still continue to use this
 - Support of partial Markdown
 - [Private chat, group chat, invitation mode, independent chat session](https://github.com/Lakr233/ChatBot-TGLM6B)
 
-|                             Claude                             |                            Bard                            |
-| :------------------------------------------------------------: | :--------------------------------------------------------: |
-|                   ❌Online - ✅Stream generate                   |                 ✅Online - ❌Stream generate                 |
-| <img src="https://user-images.githubusercontent.com/41275670/232324173-6e451359-45be-4e87-a64a-5f485806b3fa.gif" alt="demo_claude" width="288"> | <img src="https://user-images.githubusercontent.com/41275670/232329807-71154441-58f0-4763-ab8b-8d6a74afb270.gif" alt="demo_bard" width="288"> |
+|                                                                     Claude                                                                      |                                                             Bard                                                              |
+| :---------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
+|                                       ✅ Non-English <br> ✅ Streaming output <br> ❌ Access to the Internet                                       |                              ❌ Non-English <br> ❌ Streaming output <br> ✅ Access to the Internet                              |
+| <img src="https://user-images.githubusercontent.com/41275670/234178910-422cc3cd-b1bf-4c06-bc51-7c75c0b71b35.gif" alt="demo_claude" width="288"> | <img src="https://user-images.githubusercontent.com/41275670/234179231-ed955dec-a75c-432f-9ec1-44c419998ffd.gif" width="288"> |
 
 ## Usage
 
