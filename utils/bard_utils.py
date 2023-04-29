@@ -4,10 +4,8 @@ from config import config
 
 
 class Bard:
-    def __init__(self, id=None) -> None:
-        self.mode = 'bard'
+    def __init__(self):
         self.client = Chatbot(config.bard_api)
-        self.id = id
 
     def reset(self):
         self.client.conversation_id = ''

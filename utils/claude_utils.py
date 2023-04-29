@@ -4,16 +4,14 @@ from config import config
 
 
 class Claude:
-    def __init__(self, id=None, model='claude-v1.3', temperature=1., cutoff=50) -> None:
-        self.mode = 'claude'
-        self.model = model
-        self.temperature = temperature
-        self.cutoff = cutoff
+    def __init__(self):
+        self.model = 'claude-v1.3'
+        self.temperature = 1.
+        self.cutoff = 50
         self.max_tokens_to_sample = 9216
         self.stop_sequences = [anthropic.HUMAN_PROMPT]
         self.client = anthropic.Client(config.claude_api)
         self.prompt = ''
-        self.id = id
 
     def reset(self):
         self.prompt = ''
@@ -46,19 +44,6 @@ class Claude:
             self.cutoff = cutoff
             return True
         return False
-
-    def send_message(self, message):
-        self.prompt = f'{self.prompt}{anthropic.HUMAN_PROMPT} {message}{anthropic.AI_PROMPT}'
-        self.max_tokens_to_sample -= anthropic.count_tokens(self.prompt)
-        response = self.client.completion(
-            prompt=self.prompt,
-            stop_sequences=self.stop_sequences,
-            max_tokens_to_sample=self.max_tokens_to_sample,
-            model=self.model,
-            temperature=self.temperature,
-        )
-        self.prompt = f"{self.prompt}{response['completion']}"
-        return response['completion']
 
     def send_message_stream(self, message):
         self.prompt = f'{self.prompt}{anthropic.HUMAN_PROMPT} {message}{anthropic.AI_PROMPT}'

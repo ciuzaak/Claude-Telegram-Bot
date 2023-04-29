@@ -1,5 +1,4 @@
 import asyncio
-import json
 import re
 import urllib.parse
 
@@ -7,104 +6,52 @@ from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
                       Update)
 from telegram.constants import ParseMode
 from telegram.ext import (Application, ApplicationBuilder,
-                          CallbackQueryHandler, CommandHandler, MessageHandler)
+                          CallbackQueryHandler, CommandHandler, ContextTypes,
+                          MessageHandler, filters)
 
 from config import config
 from utils.bard_utils import Bard
 from utils.claude_utils import Claude
 
 token = config.telegram_token
-admin_id = config.telegram_username
-fine_granted_identifier = []
-# load from fine_granted_identifier.json if exists
-try:
-    with open('fine_granted_identifier.json', 'r') as f:
-        fine_granted_identifier = json.load(f)
-except Exception as e:
-    pass
-chat_context_container = {}
+user_ids = config.telegram_users
+single_mode = config.single_mode
+default_mode = config.default_mode
 
 
-def validate_user(update: Update) -> bool:
-    identifier = user_identifier(update)
-    return identifier in admin_id or identifier in fine_granted_identifier
+def get_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mode = context.chat_data.get('mode', default_mode)
+    cls = Claude if mode == 'claude' else Bard
+    if mode not in context.chat_data:
+        context.chat_data[mode] = {'session': cls()}
+    return mode, context.chat_data[mode]['session']
 
 
-def check_should_handle(update: Update, context) -> bool:
-    if update.message is None or update.message.text is None or len(update.message.text) == 0:
-        return False
-
-    # if is a private chat
-    if update.effective_chat.type == 'private':
-        return True
-
-    # if replying to ourself
-    if (
-        True
-        and (update.message.reply_to_message is not None)
-        and (update.message.reply_to_message.from_user is not None)
-        and (update.message.reply_to_message.from_user.id is not None)
-        and (update.message.reply_to_message.from_user.id == context.bot.id)
-    ):
-        return True
-
-    # if mentioning ourself, at the beginning of the message
-    if update.message.entities is not None:
-        for entity in update.message.entities:
-            if (
-                True
-                and (entity.type is not None)
-                and (entity.type == 'mention')
-                # and (entity.user is not None)
-                # and (entity.user.id is not None)
-                # and (entity.user.id == context.bot.id)
-            ):
-                mention_text = update.message.text[entity.offset:entity.offset + entity.length]
-                if not mention_text == f'@{context.bot.username}':
-                    continue
-                return True
-
-    return False
-
-
-def user_identifier(update: Update) -> str:
-    return f'{update.effective_chat.id}'
-
-
-def get_chat_session(update: Update, context):
-    user_id = user_identifier(update)
-    chat_session = chat_context_container.get(user_id)
-    if chat_session is None:
-        chat_session = Claude(id=user_id)
-        context.chat_data['claude'] = {}
-        chat_context_container[user_id] = chat_session
-    return chat_session
-
-
-async def reset_chat(update: Update, context):
-    if not validate_user(update):
-        return
-
-    user_id = user_identifier(update)
-    if user_id in chat_context_container:
-        chat_context_container[user_id].reset()
-        await update.message.reply_text('✅ Chat history has been reset.')
-    else:
-        await update.message.reply_text('❌ Chat history is empty.')
+async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mode, session = get_session(update, context)
+    session.reset()
+    context.chat_data[mode].pop('last_message', None)
+    context.chat_data[mode].pop('drafts', None)
+    await update.message.reply_text('✅ Chat history has been reset.')
 
 
 # Google bard: view other drafts
-async def view_other_drafts(update: Update, context):
-    if update.callback_query.data == 'drafts':
+async def view_other_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if 'last_message' not in context.chat_data['bard']:
+        return
+    if update.callback_query.data == f"{context.chat_data['bard']['last_message']}":
         # increase choice index
-        context.chat_data['bard']['index'] = (
-            context.chat_data['bard']['index'] + 1) % len(context.chat_data['bard']['choices'])
-        await bard_response(**context.chat_data['bard'])
+        context.chat_data['bard']['drafts']['index'] = (
+            context.chat_data['bard']['drafts']['index'] + 1) % len(context.chat_data['bard']['drafts']['choices'])
+        await bard_response(update, context)
 
 
 # Google bard: response
-async def bard_response(chat_session, message, markup, sources, choices, index):
-    chat_session.client.choice_id = choices[index]['id']
+async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    session = context.chat_data['bard']['session']
+    message, markup, sources, choices, index = context.chat_data['bard']['drafts'].values(
+    )
+    session.client.choice_id = choices[index]['id']
     content = choices[index]['content'][0]
     _content = re.sub(
         r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', content).replace('\\*\\*', '*')
@@ -121,32 +68,24 @@ async def bard_response(chat_session, message, markup, sources, choices, index):
             await message.edit_text(content[:4096], reply_markup=markup)
         else:
             print(f'[e] {e}')
-            chat_session.reset()
-            await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
+            await message.edit_text('❌ Error orrurred, please try again later.')
+            await reset_chat(update, context)
 
 
-# reply. Stream chat for claude
-async def recv_msg(update: Update, context):
-    if not validate_user(update):
-        return
-    if not check_should_handle(update, context):
-        return
-    chat_session = get_chat_session(update, context)
-
+async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mode, session = get_session(update, context)
     message = await update.message.reply_text('.')
-    if message is None:
-        return
+    context.chat_data[mode]['last_message'] = message.message_id
 
     try:
         input_text = update.message.text
         # remove bot name from text with @
-        pattern = f'@{context.bot.username}'
-        input_text = input_text.replace(pattern, '')
+        input_text = input_text.replace(f'@{context.bot.username}', '')
 
-        if chat_session.mode == 'claude':
-            cutoff = chat_session.cutoff
+        if mode == 'claude':
+            cutoff = session.cutoff
             prev_response = ''
-            for response in chat_session.send_message_stream(input_text):
+            for response in session.send_message_stream(input_text):
                 if abs(len(response) - len(prev_response)) < cutoff:
                     continue
                 prev_response = response
@@ -165,12 +104,12 @@ async def recv_msg(update: Update, context):
                     await message.edit_text(response[:4096])
                 else:
                     print(f'[e] {e}')
-                    chat_session.reset()
-                    await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
+                    await message.edit_text('❌ Error orrurred, please try again later.')
+                    await reset_chat(update, context)
 
         else:  # Bard
             loop = asyncio.get_event_loop()  # asynchronous
-            response = await loop.run_in_executor(None, chat_session.client.ask, input_text)
+            response = await loop.run_in_executor(None, session.client.ask, input_text)
             # get source links
             sources = ''
             if response['factualityQueries']:
@@ -181,35 +120,31 @@ async def recv_msg(update: Update, context):
 
             # Buttons
             search_url = f"https://www.google.com/search?q={urllib.parse.quote(response['textQuery'][0]) if response['textQuery'] != '' else urllib.parse.quote(input_text)}"
-            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data='drafts'),
+            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data=f'{message.message_id}'),
                                             InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
-            context.chat_data['bard'] = {'chat_session': chat_session, 'message': message,
-                                         'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
+            context.chat_data['bard']['drafts'] = {
+                'message': message, 'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
             # get response
-            await bard_response(**context.chat_data['bard'])
+            await bard_response(update, context)
 
     except Exception as e:
         print(f'[e] {e}')
-        chat_session.reset()
-        await message.edit_text('❌ Error orrurred, please try again later. Your chat history has been reset.')
+        await message.edit_text('❌ Error orrurred, please try again later.')
+        await reset_chat(update, context)
 
 
-# Settings
-async def show_settings(update: Update, context):
-    if not validate_user(update):
-        return
-    chat_session = get_chat_session(update, context)
+async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    current_mode, session = get_session(update, context)
 
-    current_mode = chat_session.mode
     infos = [
         f'<b>Current mode:</b> {current_mode}',
     ]
     extras = []
     if current_mode == 'claude':
         extras = [
-            f'<b>Current model:</b> {chat_session.model}',
-            f'<b>Current temperature:</b> {chat_session.temperature}',
-            f'<b>Current cutoff:</b> {chat_session.cutoff}',
+            f'<b>Current model:</b> {session.model}',
+            f'<b>Current temperature:</b> {session.temperature}',
+            f'<b>Current cutoff:</b> {session.cutoff}',
             '',
             'Commands:',
             '• /mode to use Google Bard',
@@ -228,26 +163,27 @@ async def show_settings(update: Update, context):
     await update.message.reply_text('\n'.join(infos), parse_mode=ParseMode.HTML)
 
 
-async def change_mode(update: Update, context):
-    if not validate_user(update):
+async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if single_mode:
+        await update.message.reply_text(f'❌ You cannot access the other mode.')
         return
-    chat_session = get_chat_session(update, context)
+    mode, session = get_session(update, context)
 
-    user_id = user_identifier(update)
-    final_mode = 'bard' if chat_session.mode == 'claude' else 'claude'
-    chat_session = Claude(
-        id=user_id, **context.chat_data['claude']) if final_mode == 'claude' else Bard(id=user_id)
-    chat_context_container[user_id] = chat_session
+    final_mode = 'bard' if mode == 'claude' else 'claude'
+    if final_mode not in context.chat_data:
+        context.chat_data[final_mode] = {
+            'session': Claude() if final_mode == 'claude' else Bard()}
+    context.chat_data['mode'] = final_mode
     await update.message.reply_text(f'✅ Mode has been switched to {final_mode}.')
-    await show_settings(update, context)
+    if 'last_message' in context.chat_data[final_mode]:
+        await update.message.reply_text('☝️ This is our last conversation.',
+                                        reply_to_message_id=context.chat_data[final_mode]['last_message'])
 
 
-async def change_model(update: Update, context):
-    if not validate_user(update):
-        return
-    chat_session = get_chat_session(update, context)
+async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mode, session = get_session(update, context)
 
-    if chat_session.mode == 'bard':
+    if mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
@@ -255,20 +191,16 @@ async def change_model(update: Update, context):
         await update.message.reply_text('❌ Please provide a model name.')
         return
     model = context.args[0].strip()
-    if not chat_session.change_model(model):
+    if not session.change_model(model):
         await update.message.reply_text('❌ Invalid model name.')
         return
-    context.chat_data['claude']['model'] = model
     await update.message.reply_text(f'✅ Model has been switched to {model}.')
-    await show_settings(update, context)
 
 
-async def change_temperature(update: Update, context):
-    if not validate_user(update):
-        return
-    chat_session = get_chat_session(update, context)
+async def change_temperature(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mode, session = get_session(update, context)
 
-    if chat_session.mode == 'bard':
+    if mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
@@ -276,20 +208,16 @@ async def change_temperature(update: Update, context):
         await update.message.reply_text('❌ Please provide a temperature value.')
         return
     temperature = context.args[0].strip()
-    if not chat_session.change_temperature(temperature):
+    if not session.change_temperature(temperature):
         await update.message.reply_text('❌ Invalid temperature value.')
         return
-    context.chat_data['claude']['temperature'] = float(temperature)
     await update.message.reply_text(f'✅ Temperature has been set to {temperature}.')
-    await show_settings(update, context)
 
 
-async def change_cutoff(update: Update, context):
-    if not validate_user(update):
-        return
-    chat_session = get_chat_session(update, context)
+async def change_cutoff(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mode, session = get_session(update, context)
 
-    if chat_session.mode == 'bard':
+    if mode == 'bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
@@ -297,16 +225,14 @@ async def change_cutoff(update: Update, context):
         await update.message.reply_text('❌ Please provide a cutoff value.')
         return
     cutoff = context.args[0].strip()
-    if not chat_session.change_cutoff(cutoff):
+    if not session.change_cutoff(cutoff):
         await update.message.reply_text('❌ Invalid cutoff value.')
         return
-    context.chat_data['claude']['cutoff'] = int(cutoff)
     await update.message.reply_text(f'✅ Cutoff has been set to {cutoff}.')
-    await show_settings(update, context)
 
 
-async def start_bot(update: Update, context):
-    id = user_identifier(update)
+async def start_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    id = update.effective_user.id
     welcome_strs = [
         'Welcome to <b>Claude & Bard Telegram Bot</b>',
         '',
@@ -316,94 +242,15 @@ async def start_bot(update: Update, context):
         '• /mode to switch between Claude & Bard',
         '• /settings to show Claude & Bard settings',
     ]
-    if id in admin_id:
-        extra = [
-            '',
-            'Admin Commands:',
-            '• /grant to grant fine-granted access to a user',
-            '• /ban to ban a user',
-            '• /status to report the status of the bot',
-            '• /reboot to clear all chat history',
-        ]
-        welcome_strs.extend(extra)
-    print(f'[i] {update.effective_user.username} started the bot')
+    print(f'[i] {id} started the bot')
     await update.message.reply_text('\n'.join(welcome_strs), parse_mode=ParseMode.HTML)
 
 
-async def send_id(update: Update, context):
-    current_identifier = user_identifier(update)
-    await update.message.reply_text(f'Your chat identifier is {current_identifier}, send it to the bot admin to get fine-granted access.')
+async def send_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f'Your chat identifier is {update.effective_chat.id}, send it to the bot admin to get fine-granted access.')
 
 
-async def grant(update: Update, context):
-    current_identifier = user_identifier(update)
-    if current_identifier not in admin_id:
-        await update.message.reply_text('❌ You are not admin!')
-        return
-    if len(context.args) != 1:
-        await update.message.reply_text('❌ Please provide a user id to grant!')
-        return
-    user_id = context.args[0].strip()
-    if user_id in fine_granted_identifier:
-        await update.message.reply_text('❌ User already has fine-granted access!')
-        return
-    fine_granted_identifier.append(user_id)
-    with open('fine_granted_identifier.json', 'w') as f:
-        json.dump(list(fine_granted_identifier), f)
-    await update.message.reply_text('✅ User has been granted fine-granted access!')
-
-
-async def ban(update: Update, context):
-    current_identifier = user_identifier(update)
-    if current_identifier not in admin_id:
-        await update.message.reply_text('❌ You are not admin!')
-        return
-    if len(context.args) != 1:
-        await update.message.reply_text('❌ Please provide a user id to ban!')
-        return
-    user_id = context.args[0].strip()
-    if user_id in fine_granted_identifier:
-        fine_granted_identifier.remove(user_id)
-    if user_id in chat_context_container:
-        del chat_context_container[user_id]
-    with open('fine_granted_identifier.json', 'w') as f:
-        json.dump(list(fine_granted_identifier), f)
-    await update.message.reply_text('✅ User has been banned!')
-
-
-async def status(update: Update, context):
-    current_identifier = user_identifier(update)
-    if current_identifier not in admin_id:
-        await update.message.reply_text('❌ You are not admin!')
-        return
-    report = [
-        'Status Report:',
-        f'[+] admin users: {admin_id}',
-        f'[+] fine-granted users: {len(fine_granted_identifier)}',
-        f'[+] chat sessions: {len(chat_context_container)}',
-        '',
-    ]
-    # list each fine-granted user
-    cnt = 1
-    for user_id in fine_granted_identifier:
-        report.append(f'[i] {cnt} {user_id}')
-        cnt += 1
-    await update.message.reply_text(
-        '```\n' + '\n'.join(report) + '\n```',
-        parse_mode=ParseMode.MARKDOWN_V2,
-    )
-
-
-async def reboot(update: Update, context):
-    current_identifier = user_identifier(update)
-    if current_identifier not in admin_id:
-        await update.message.reply_text('❌ You are not admin!')
-        return
-    chat_context_container.clear()
-    await update.message.reply_text('✅ All chat history has been cleared!')
-
-
-async def error_handler(update: Update, context):
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'[e] {context.error}')
 
 
@@ -416,29 +263,30 @@ async def post_init(application: Application):
     ])
 
 
-print(f'[+] bot started, calling loop!')
-application = ApplicationBuilder().token(token).post_init(
-    post_init).concurrent_updates(True).build()
+if __name__ == '__main__':
+    print(f'[+] bot started, calling loop!')
+    application = ApplicationBuilder().token(token).post_init(
+        post_init).concurrent_updates(True).build()
 
-handler_list = [
-    CommandHandler('id', send_id),
-    CommandHandler('start', start_bot),
-    CommandHandler('help', start_bot),
-    CommandHandler('reset', reset_chat),
-    CommandHandler('grant', grant),
-    CommandHandler('ban', ban),
-    CommandHandler('status', status),
-    CommandHandler('reboot', reboot),
-    CommandHandler('settings', show_settings),
-    CommandHandler('mode', change_mode),
-    CommandHandler('model', change_model),
-    CommandHandler('temp', change_temperature),
-    CommandHandler('cutoff', change_cutoff),
-    CallbackQueryHandler(view_other_drafts),
-    MessageHandler(None, recv_msg),
-]
-for handler in handler_list:
-    application.add_handler(handler)
-application.add_error_handler(error_handler)
+    user_filter = filters.Chat(chat_id=user_ids)
+    message_filter = filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE | (
+        filters.ChatType.GROUPS & filters.REPLY | filters.Entity('mention'))
 
-application.run_polling(drop_pending_updates=True)
+    handler_list = [
+        CommandHandler('id', send_id),
+        CommandHandler('start', start_bot),
+        CommandHandler('help', start_bot),
+        CommandHandler('reset', reset_chat, user_filter),
+        CommandHandler('settings', show_settings, user_filter),
+        CommandHandler('mode', change_mode, user_filter),
+        CommandHandler('model', change_model, user_filter),
+        CommandHandler('temp', change_temperature, user_filter),
+        CommandHandler('cutoff', change_cutoff, user_filter),
+        MessageHandler(message_filter & user_filter, recv_msg),
+        CallbackQueryHandler(view_other_drafts),
+    ]
+    for handler in handler_list:
+        application.add_handler(handler)
+    application.add_error_handler(error_handler)
+
+    application.run_polling(drop_pending_updates=True)

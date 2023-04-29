@@ -18,7 +18,7 @@ If you only have access to one of the models, you can still continue to use this
 - Show reference links and Google search keywords from Bard's answers *(button: `🔍 Google it`)*
 - Switch between different drafts provided by Bard's answers *(button: `📝 View other drafts`)*
 - Support of partial Markdown
-- [Private chat, group chat, invitation mode, independent chat session](https://github.com/Lakr233/ChatBot-TGLM6B)
+- Private chat, group chat, independent chat session, ~~invitation mode~~
 
 |                                                                     Claude                                                                      |                                                             Bard                                                              |
 | :---------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
