@@ -27,14 +27,22 @@ If you only have access to one of the models, you can still continue to use this
 
 ## Usage
 
-1. Fill in `config/config.yml` with reference to `config/config.example.yml`.
+1. Clone this repository.
+
+2. Fill in `config/config.yml` with reference to `config/config.example.yml`.
 
     - [How to obtain telegram bot token](https://core.telegram.org/bots/tutorial#obtain-your-bot-token)
     - [How to obtain telegram user id](https://bigone.zendesk.com/hc/en-us/articles/360008014894-How-to-get-the-Telegram-user-ID-)
 
-2. Start the bot by:
+3. Start the bot by:
 
-    - Scripts:
+    - Docker (*with docker engine and docker-compose pre-installed*):
+
+        ```bash
+        docker-compose up --build
+        ```
+
+    - Scripts (*with python >= 3.8 and python3-venv pre-installed*):
 
         ```bash
         # create the virtual environment
@@ -42,12 +50,6 @@ If you only have access to one of the models, you can still continue to use this
 
         # start the bot
         bash scripts/run.sh
-        ```
-
-    - Docker:
-
-        ```bash
-        docker-compose up --build
         ```
 
 ## Acknowledgements

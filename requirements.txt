@@ -1,6 +1,4 @@
-wheel
 pyyaml
-requests
-python-telegram-bot[rate-limiter]
+python-telegram-bot
 anthropic
 GoogleBard
