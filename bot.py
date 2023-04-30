@@ -33,7 +33,7 @@ async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Google bard: view other drafts
 async def view_other_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     last_message = context.chat_data['Bard'].get('last_message')
-    if last_message is not None and update.callback_query.data == f"{last_message}":
+    if last_message is not None and update.callback_query.data == f'{last_message}':
         # increase choice index
         context.chat_data['Bard']['drafts']['index'] = (
             context.chat_data['Bard']['drafts']['index'] + 1) % len(context.chat_data['Bard']['drafts']['choices'])
@@ -260,12 +260,12 @@ async def post_init(application: Application):
 
 def run_bot():
     print(f'[+] bot started, calling loop!')
-    application = ApplicationBuilder().token(config.telegram_token).post_init(
+    application = ApplicationBuilder().token(config.bot_token).post_init(
         post_init).concurrent_updates(True).build()
 
-    user_filter = filters.Chat(chat_id=config.telegram_users)
+    user_filter = filters.Chat(chat_id=config.user_ids)
     message_filter = filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE | (
-        filters.ChatType.GROUPS & filters.REPLY | filters.Entity('mention'))
+        filters.ChatType.GROUPS & filters.REPLY | (filters.Entity('mention') & filters.Regex(f'@{config.bot_name}')))
 
     handler_list = [
         CommandHandler('id', send_id),

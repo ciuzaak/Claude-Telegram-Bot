@@ -160,4 +160,3 @@ cython_debug/
 #.idea/
 
 config/config.yml
-fine_granted_identifier.json

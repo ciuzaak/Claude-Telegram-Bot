@@ -1,6 +1,7 @@
 telegram:
-  token: TELEGRAM_BOT_TOKEN
-  users: [TELEGRAM_USER_ID_1, TELEGRAM_USER_ID_2 ... TELEGRAM_USER_ID_N]
+  bot_name: TELEGRAM_BOT_USERNAME
+  bot_token: TELEGRAM_BOT_TOKEN
+  user_ids: [TELEGRAM_USER_ID_1, TELEGRAM_USER_ID_2 ... TELEGRAM_USER_ID_N]
 claude:
   api: CLAUDE_API_KEY # leave it blank if you don't want to use claude
 bard:
