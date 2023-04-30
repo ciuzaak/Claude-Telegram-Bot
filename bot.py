@@ -9,9 +9,8 @@ from telegram.ext import (Application, ApplicationBuilder,
                           CallbackQueryHandler, CommandHandler, ContextTypes,
                           MessageHandler, filters)
 
-from config import config
-from utils.bard_utils import Bard
-from utils.claude_utils import Claude
+import config
+from utils import Session
 
 TOKEN = config.telegram_token
 USER_IDS = config.telegram_users
@@ -24,8 +23,7 @@ def get_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if mode is None:
         mode = DEFAULT_MODE
         context.chat_data['mode'] = mode
-        context.chat_data[mode] = {
-            'session': Claude() if mode == 'claude' else Bard()}
+        context.chat_data[mode] = {'session': Session(mode)}
     return mode, context.chat_data[mode]['session']
 
 
@@ -39,18 +37,18 @@ async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Google bard: view other drafts
 async def view_other_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    last_message = context.chat_data['bard'].get('last_message')
+    last_message = context.chat_data['Bard'].get('last_message')
     if last_message is not None and update.callback_query.data == f"{last_message}":
         # increase choice index
-        context.chat_data['bard']['drafts']['index'] = (
-            context.chat_data['bard']['drafts']['index'] + 1) % len(context.chat_data['bard']['drafts']['choices'])
+        context.chat_data['Bard']['drafts']['index'] = (
+            context.chat_data['Bard']['drafts']['index'] + 1) % len(context.chat_data['Bard']['drafts']['choices'])
         await bard_response(update, context)
 
 
 # Google bard: response
 async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    session = context.chat_data['bard']['session']
-    message, markup, sources, choices, index = context.chat_data['bard']['drafts'].values(
+    session = context.chat_data['Bard']['session']
+    message, markup, sources, choices, index = context.chat_data['Bard']['drafts'].values(
     )
     session.client.choice_id = choices[index]['id']
     content = choices[index]['content'][0]
@@ -83,7 +81,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # remove bot name from text with @
         input_text = input_text.replace(f'@{context.bot.username}', '')
 
-        if mode == 'claude':
+        if mode == 'Claude':
             cutoff = session.cutoff
             prev_response = ''
             for response in session.send_message_stream(input_text):
@@ -123,7 +121,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             search_url = f"https://www.google.com/search?q={urllib.parse.quote(response['textQuery'][0]) if response['textQuery'] != '' else urllib.parse.quote(input_text)}"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data=f'{message.message_id}'),
                                             InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
-            context.chat_data['bard']['drafts'] = {
+            context.chat_data['Bard']['drafts'] = {
                 'message': message, 'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
             # get response
             await bard_response(update, context)
@@ -141,7 +139,7 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f'<b>Current mode:</b> {mode}',
     ]
     extras = []
-    if mode == 'claude':
+    if mode == 'Claude':
         extras = [
             f'<b>Current model:</b> {session.model}',
             f'<b>Current temperature:</b> {session.temperature}',
@@ -170,23 +168,22 @@ async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     mode, _ = get_session(update, context)
 
-    final_mode = 'bard' if mode == 'claude' else 'claude'
+    final_mode = 'Bard' if mode == 'Claude' else 'Claude'
     context.chat_data['mode'] = final_mode
     if final_mode not in context.chat_data:
-        context.chat_data[final_mode] = {
-            'session': Claude() if final_mode == 'claude' else Bard()}
+        context.chat_data[final_mode] = {'session': Session(final_mode)}
     await update.message.reply_text(f'✅ Mode has been switched to {final_mode}.')
 
     last_message = context.chat_data[final_mode].get('last_message')
     if last_message is not None:
-        await update.message.reply_text('☝️ This is our last conversation.',
+        await update.message.reply_text(f"☝️ {final_mode}'s last answer. /reset",
                                         reply_to_message_id=last_message)
 
 
 async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
 
-    if mode == 'bard':
+    if mode == 'Bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
@@ -203,7 +200,7 @@ async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def change_temperature(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
 
-    if mode == 'bard':
+    if mode == 'Bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
@@ -220,7 +217,7 @@ async def change_temperature(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def change_cutoff(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
 
-    if mode == 'bard':
+    if mode == 'Bard':
         await update.message.reply_text('❌ Invalid option for Google Bard.')
         return
 
