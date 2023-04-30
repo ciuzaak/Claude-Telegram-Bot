@@ -12,16 +12,11 @@ from telegram.ext import (Application, ApplicationBuilder,
 import config
 from utils import Session
 
-TOKEN = config.telegram_token
-USER_IDS = config.telegram_users
-SINGLE_MODE = config.single_mode
-DEFAULT_MODE = config.default_mode
-
 
 def get_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode = context.chat_data.get('mode')
     if mode is None:
-        mode = DEFAULT_MODE
+        mode = config.default_mode
         context.chat_data['mode'] = mode
         context.chat_data[mode] = {'session': Session(mode)}
     return mode, context.chat_data[mode]['session']
@@ -163,7 +158,7 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if SINGLE_MODE:
+    if config.single_mode:
         await update.message.reply_text(f'❌ You cannot access the other mode.')
         return
     mode, _ = get_session(update, context)
@@ -265,10 +260,10 @@ async def post_init(application: Application):
 
 def run_bot():
     print(f'[+] bot started, calling loop!')
-    application = ApplicationBuilder().token(TOKEN).post_init(
+    application = ApplicationBuilder().token(config.telegram_token).post_init(
         post_init).concurrent_updates(True).build()
 
-    user_filter = filters.Chat(chat_id=USER_IDS)
+    user_filter = filters.Chat(chat_id=config.telegram_users)
     message_filter = filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE | (
         filters.ChatType.GROUPS & filters.REPLY | filters.Entity('mention'))
 
