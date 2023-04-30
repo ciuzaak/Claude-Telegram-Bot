@@ -13,17 +13,19 @@ from config import config
 from utils.bard_utils import Bard
 from utils.claude_utils import Claude
 
-token = config.telegram_token
-user_ids = config.telegram_users
-single_mode = config.single_mode
-default_mode = config.default_mode
+TOKEN = config.telegram_token
+USER_IDS = config.telegram_users
+SINGLE_MODE = config.single_mode
+DEFAULT_MODE = config.default_mode
 
 
 def get_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    mode = context.chat_data.get('mode', default_mode)
-    cls = Claude if mode == 'claude' else Bard
-    if mode not in context.chat_data:
-        context.chat_data[mode] = {'session': cls()}
+    mode = context.chat_data.get('mode')
+    if mode is None:
+        mode = DEFAULT_MODE
+        context.chat_data['mode'] = mode
+        context.chat_data[mode] = {
+            'session': Claude() if mode == 'claude' else Bard()}
     return mode, context.chat_data[mode]['session']
 
 
@@ -37,9 +39,8 @@ async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Google bard: view other drafts
 async def view_other_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if 'last_message' not in context.chat_data['bard']:
-        return
-    if update.callback_query.data == f"{context.chat_data['bard']['last_message']}":
+    last_message = context.chat_data['bard'].get('last_message')
+    if last_message is not None and update.callback_query.data == f"{last_message}":
         # increase choice index
         context.chat_data['bard']['drafts']['index'] = (
             context.chat_data['bard']['drafts']['index'] + 1) % len(context.chat_data['bard']['drafts']['choices'])
@@ -134,13 +135,13 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    current_mode, session = get_session(update, context)
+    mode, session = get_session(update, context)
 
     infos = [
-        f'<b>Current mode:</b> {current_mode}',
+        f'<b>Current mode:</b> {mode}',
     ]
     extras = []
-    if current_mode == 'claude':
+    if mode == 'claude':
         extras = [
             f'<b>Current model:</b> {session.model}',
             f'<b>Current temperature:</b> {session.temperature}',
@@ -164,20 +165,22 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if single_mode:
+    if SINGLE_MODE:
         await update.message.reply_text(f'❌ You cannot access the other mode.')
         return
-    mode, session = get_session(update, context)
+    mode, _ = get_session(update, context)
 
     final_mode = 'bard' if mode == 'claude' else 'claude'
+    context.chat_data['mode'] = final_mode
     if final_mode not in context.chat_data:
         context.chat_data[final_mode] = {
             'session': Claude() if final_mode == 'claude' else Bard()}
-    context.chat_data['mode'] = final_mode
     await update.message.reply_text(f'✅ Mode has been switched to {final_mode}.')
-    if 'last_message' in context.chat_data[final_mode]:
+
+    last_message = context.chat_data[final_mode].get('last_message')
+    if last_message is not None:
         await update.message.reply_text('☝️ This is our last conversation.',
-                                        reply_to_message_id=context.chat_data[final_mode]['last_message'])
+                                        reply_to_message_id=last_message)
 
 
 async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -232,7 +235,6 @@ async def change_cutoff(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def start_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    id = update.effective_user.id
     welcome_strs = [
         'Welcome to <b>Claude & Bard Telegram Bot</b>',
         '',
@@ -242,12 +244,13 @@ async def start_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '• /mode to switch between Claude & Bard',
         '• /settings to show Claude & Bard settings',
     ]
-    print(f'[i] {id} started the bot')
+    print(f'[i] {update.effective_user.id} started the bot')
     await update.message.reply_text('\n'.join(welcome_strs), parse_mode=ParseMode.HTML)
 
 
 async def send_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f'Your chat identifier is {update.effective_chat.id}, send it to the bot admin to get fine-granted access.')
+    await update.message.reply_text(f'Your chat identifier is `{update.effective_chat.id}`, send it to the bot admin to get access\\.',
+                                    parse_mode=ParseMode.MARKDOWN_V2)
 
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -263,12 +266,12 @@ async def post_init(application: Application):
     ])
 
 
-if __name__ == '__main__':
+def run_bot():
     print(f'[+] bot started, calling loop!')
-    application = ApplicationBuilder().token(token).post_init(
+    application = ApplicationBuilder().token(TOKEN).post_init(
         post_init).concurrent_updates(True).build()
 
-    user_filter = filters.Chat(chat_id=user_ids)
+    user_filter = filters.Chat(chat_id=USER_IDS)
     message_filter = filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE | (
         filters.ChatType.GROUPS & filters.REPLY | filters.Entity('mention'))
 
@@ -290,3 +293,7 @@ if __name__ == '__main__':
     application.add_error_handler(error_handler)
 
     application.run_polling(drop_pending_updates=True)
+
+
+if __name__ == '__main__':
+    run_bot()
