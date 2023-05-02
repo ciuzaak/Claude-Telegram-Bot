@@ -1,6 +1,6 @@
 import asyncio
 import re
-import urllib.parse
+from urllib.parse import quote
 
 from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
                       Update)
@@ -27,7 +27,7 @@ async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session.reset()
     context.chat_data[mode].pop('last_message', None)
     context.chat_data[mode].pop('drafts', None)
-    await update.message.reply_text('✅ Chat history has been reset.')
+    await update.message.reply_text('🧹 Chat history has been reset.')
 
 
 # Google bard: view other drafts
@@ -113,7 +113,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     '\n'.join([f'{i+1}. {val}' for i, val in enumerate(links)])
 
             # Buttons
-            search_url = f"https://www.google.com/search?q={urllib.parse.quote(response['textQuery'][0]) if response['textQuery'] != '' else urllib.parse.quote(input_text)}"
+            search_url = f"https://www.google.com/search?q={quote(response['textQuery'][0]) if response['textQuery'] != '' else quote(input_text)}"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data=f'{message.message_id}'),
                                             InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
             context.chat_data['Bard']['drafts'] = {
@@ -131,14 +131,14 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
 
     infos = [
-        f'<b>Current mode:</b> {mode}',
+        f'Mode: <b>{mode}</b>',
     ]
     extras = []
     if mode == 'Claude':
         extras = [
-            f'<b>Current model:</b> {session.model}',
-            f'<b>Current temperature:</b> {session.temperature}',
-            f'<b>Current cutoff:</b> {session.cutoff}',
+            f'Model: <b>{session.model}</b>',
+            f'Temperature: <b>{session.temperature}</b>',
+            f'Cutoff: <b>{session.cutoff}</b>',
             '',
             'Commands:',
             '• /mode to use Google Bard',
@@ -163,16 +163,17 @@ async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     mode, _ = get_session(update, context)
 
-    final_mode = 'Bard' if mode == 'Claude' else 'Claude'
+    final_mode, emoji = ('Bard', '🟠') if mode == 'Claude' else ('Claude', '🟣')
     context.chat_data['mode'] = final_mode
     if final_mode not in context.chat_data:
         context.chat_data[final_mode] = {'session': Session(final_mode)}
-    await update.message.reply_text(f'✅ Mode has been switched to {final_mode}.')
+    await update.message.reply_text(f'{emoji} Mode has been switched to <b>{final_mode}</b>.',
+                                    parse_mode=ParseMode.HTML)
 
     last_message = context.chat_data[final_mode].get('last_message')
     if last_message is not None:
-        await update.message.reply_text(f"☝️ {final_mode}'s last answer. /reset",
-                                        reply_to_message_id=last_message)
+        await update.message.reply_text(f"☝️ <b>{final_mode}</b>'s last answer. /reset",
+                                        reply_to_message_id=last_message, parse_mode=ParseMode.HTML)
 
 
 async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -189,7 +190,8 @@ async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not session.change_model(model):
         await update.message.reply_text('❌ Invalid model name.')
         return
-    await update.message.reply_text(f'✅ Model has been switched to {model}.')
+    await update.message.reply_text(f'🤖 Model has been switched to <b>{model}</b>.',
+                                    parse_mode=ParseMode.HTML)
 
 
 async def change_temperature(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -206,7 +208,8 @@ async def change_temperature(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not session.change_temperature(temperature):
         await update.message.reply_text('❌ Invalid temperature value.')
         return
-    await update.message.reply_text(f'✅ Temperature has been set to {temperature}.')
+    await update.message.reply_text(f'🌡️ Temperature has been set to <b>{temperature}</b>.',
+                                    parse_mode=ParseMode.HTML)
 
 
 async def change_cutoff(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -223,7 +226,8 @@ async def change_cutoff(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not session.change_cutoff(cutoff):
         await update.message.reply_text('❌ Invalid cutoff value.')
         return
-    await update.message.reply_text(f'✅ Cutoff has been set to {cutoff}.')
+    await update.message.reply_text(f'✂️ Cutoff has been set to <b>{cutoff}</b>.',
+                                    parse_mode=ParseMode.HTML)
 
 
 async def start_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -236,7 +240,7 @@ async def start_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '• /mode to switch between Claude & Bard',
         '• /settings to show Claude & Bard settings',
     ]
-    print(f'[i] {update.effective_user.id} started the bot')
+    print(f'[i] {update.effective_user.username} started the bot')
     await update.message.reply_text('\n'.join(welcome_strs), parse_mode=ParseMode.HTML)
 
 
