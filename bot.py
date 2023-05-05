@@ -1,5 +1,5 @@
-import asyncio
-import re
+from asyncio import get_event_loop
+from re import sub
 from urllib.parse import quote
 
 from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
@@ -9,14 +9,14 @@ from telegram.ext import (Application, ApplicationBuilder,
                           CallbackQueryHandler, CommandHandler, ContextTypes,
                           MessageHandler, filters)
 
-import config
+from config import bot_name, bot_token, default_mode, single_mode, user_ids
 from utils import Session
 
 
 def get_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode = context.chat_data.get('mode')
     if mode is None:
-        mode = config.default_mode
+        mode = default_mode
         context.chat_data['mode'] = mode
         context.chat_data[mode] = {'session': Session(mode)}
     return mode, context.chat_data[mode]['session']
@@ -47,9 +47,9 @@ async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     session.client.choice_id = choices[index]['id']
     content = choices[index]['content'][0]
-    _content = re.sub(
-        r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', content).replace('\\*\\*', '*')
-    _sources = re.sub(
+    _content = sub(r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]',
+                   lambda x: f'\\{x.group(0)}', content).replace('\\*\\*', '*')
+    _sources = sub(
         r'[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', sources)
     try:
         await message.edit_text(f'{_content}{_sources}', reply_markup=markup, parse_mode=ParseMode.MARKDOWN_V2)
@@ -85,7 +85,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 prev_response = response
                 await message.edit_text(response)
 
-            _response = re.sub(
+            _response = sub(
                 r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', response)
             try:
                 await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
@@ -102,8 +102,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await reset_chat(update, context)
 
         else:  # Bard
-            loop = asyncio.get_event_loop()  # asynchronous
-            response = await loop.run_in_executor(None, session.client.ask, input_text)
+            response = await get_event_loop().run_in_executor(None, session.client.ask, input_text)
             # get source links
             sources = ''
             if response['factualityQueries']:
@@ -158,7 +157,7 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if config.single_mode:
+    if single_mode:
         await update.message.reply_text(f'❌ You cannot access the other mode.')
         return
     mode, _ = get_session(update, context)
@@ -264,12 +263,12 @@ async def post_init(application: Application):
 
 def run_bot():
     print(f'[+] bot started, calling loop!')
-    application = ApplicationBuilder().token(config.bot_token).post_init(
+    application = ApplicationBuilder().token(bot_token).post_init(
         post_init).concurrent_updates(True).build()
 
-    user_filter = filters.Chat(chat_id=config.user_ids)
+    user_filter = filters.Chat(chat_id=user_ids)
     message_filter = filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE | (
-        filters.ChatType.GROUPS & filters.REPLY | (filters.Entity('mention') & filters.Regex(f'@{config.bot_name}')))
+        filters.ChatType.GROUPS & filters.REPLY | (filters.Entity('mention') & filters.Regex(f'@{bot_name}')))
 
     handler_list = [
         CommandHandler('id', send_id),

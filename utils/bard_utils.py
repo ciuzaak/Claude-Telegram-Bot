@@ -1,11 +1,11 @@
 from Bard import Chatbot
 
-import config
+from config import bard_api
 
 
 class Bard:
     def __init__(self):
-        self.client = Chatbot(config.bard_api)
+        self.client = Chatbot(bard_api)
 
     def reset(self):
         self.client.conversation_id = ''

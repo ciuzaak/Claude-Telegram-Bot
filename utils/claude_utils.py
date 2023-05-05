@@ -1,6 +1,6 @@
-import anthropic
+from anthropic import AI_PROMPT, HUMAN_PROMPT, Client, count_tokens
 
-import config
+from config import claude_api
 
 
 class Claude:
@@ -9,8 +9,8 @@ class Claude:
         self.temperature = 1.
         self.cutoff = 50
         self.max_tokens_to_sample = 9216
-        self.stop_sequences = [anthropic.HUMAN_PROMPT]
-        self.client = anthropic.Client(config.claude_api)
+        self.stop_sequences = [HUMAN_PROMPT]
+        self.client = Client(claude_api)
         self.prompt = ''
 
     def reset(self):
@@ -46,8 +46,8 @@ class Claude:
         return False
 
     def send_message_stream(self, message):
-        self.prompt = f'{self.prompt}{anthropic.HUMAN_PROMPT} {message}{anthropic.AI_PROMPT}'
-        self.max_tokens_to_sample -= anthropic.count_tokens(self.prompt)
+        self.prompt = f'{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}'
+        self.max_tokens_to_sample -= count_tokens(self.prompt)
         response = self.client.completion_stream(
             prompt=self.prompt,
             stop_sequences=self.stop_sequences,

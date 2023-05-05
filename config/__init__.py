@@ -1,8 +1,8 @@
-import yaml
+from yaml import safe_load
 
 # load yaml config
 with open('config/config.yml', 'r') as f:
-    config_yaml = yaml.safe_load(f)
+    config_yaml = safe_load(f)
 
 # config parameters
 bot_name = config_yaml['telegram']['bot_name']
