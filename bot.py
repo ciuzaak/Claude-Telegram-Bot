@@ -1,4 +1,4 @@
-from re import sub
+from re import compile, sub
 from urllib.parse import quote
 
 from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
@@ -8,7 +8,7 @@ from telegram.ext import (Application, ApplicationBuilder,
                           CallbackQueryHandler, CommandHandler, ContextTypes,
                           MessageHandler, filters)
 
-from config import bot_name, bot_token, default_mode, single_mode, user_ids
+from config import bot_token, default_mode, single_mode, user_ids
 from utils import Session
 
 
@@ -66,6 +66,16 @@ async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.chat.type != 'private':
+        if update.message.reply_to_message:
+            if update.message.reply_to_message.from_user.username != context.bot.username:
+                return
+        elif update.message.entities is not None:
+            if not compile(f'@{context.bot.username}').search(update.message.text):
+                return
+        else:
+            return
+
     mode, session = get_session(update, context)
     message = await update.message.reply_text('.')
     context.chat_data[mode]['last_message'] = message.message_id
@@ -266,8 +276,7 @@ def run_bot():
         post_init).concurrent_updates(True).build()
 
     user_filter = filters.Chat(chat_id=user_ids)
-    message_filter = filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE | (
-        filters.ChatType.GROUPS & filters.REPLY | (filters.Entity('mention') & filters.Regex(f'@{bot_name}')))
+    message_filter = filters.TEXT & ~filters.COMMAND
 
     handler_list = [
         CommandHandler('id', send_id),

@@ -1,4 +1,5 @@
 from asyncio import get_event_loop
+from concurrent.futures import ThreadPoolExecutor
 
 from Bard import Chatbot
 
@@ -15,4 +16,5 @@ class Bard:
         self.client.choice_id = ''
 
     async def send_message(self, message):
-        return await get_event_loop().run_in_executor(None, self.client.ask, message)
+        with ThreadPoolExecutor() as executor:
+            return await get_event_loop().run_in_executor(executor, self.client.ask, message)

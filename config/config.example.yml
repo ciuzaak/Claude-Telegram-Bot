@@ -1,5 +1,4 @@
 telegram:
-  bot_name: TELEGRAM_BOT_USERNAME
   bot_token: TELEGRAM_BOT_TOKEN
   user_ids: [TELEGRAM_USER_ID_1, TELEGRAM_USER_ID_2 ... TELEGRAM_USER_ID_N]
 claude:
