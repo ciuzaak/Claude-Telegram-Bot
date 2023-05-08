@@ -1,4 +1,3 @@
-from asyncio import get_event_loop
 from re import sub
 from urllib.parse import quote
 
@@ -102,7 +101,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await reset_chat(update, context)
 
         else:  # Bard
-            response = await get_event_loop().run_in_executor(None, session.client.ask, input_text)
+            response = await session.send_message(input_text)
             # get source links
             sources = ''
             if response['factualityQueries']:
