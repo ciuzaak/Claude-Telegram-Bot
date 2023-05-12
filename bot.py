@@ -111,7 +111,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await reset_chat(update, context)
 
         else:  # Bard
-            response = await session.send_message(input_text)
+            response = session.client.ask(input_text)
             # get source links
             sources = ''
             if response['factualityQueries']:
@@ -272,8 +272,8 @@ async def post_init(application: Application):
 
 def run_bot():
     print(f'[+] bot started, calling loop!')
-    application = ApplicationBuilder().token(bot_token).post_init(
-        post_init).concurrent_updates(True).build()
+    application = ApplicationBuilder().token(
+        bot_token).post_init(post_init).build()
 
     user_filter = filters.Chat(chat_id=user_ids)
     message_filter = filters.TEXT & ~filters.COMMAND
