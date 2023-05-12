@@ -15,8 +15,19 @@ class Claude:
         self.prompt = ''
 
     def change_model(self, model):
-        valid_models = {'claude-v1', 'claude-v1.0', 'claude-v1.2',
-                        'claude-v1.3', 'claude-instant-v1', 'claude-instant-v1.0'}
+        valid_models = {
+            'claude-v1',
+            'claude-v1-100k',
+            'claude-instant-v1',
+            'claude-instant-v1-100k',
+            'claude-v1.3',
+            'claude-v1.3-100k',
+            'claude-v1.2',
+            'claude-v1.0',
+            'claude-instant-v1.1',
+            'claude-instant-v1.1-100k',
+            'claude-instant-v1.0'
+        }
         if model in valid_models:
             self.model = model
             return True
