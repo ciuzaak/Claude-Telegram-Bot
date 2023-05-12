@@ -25,6 +25,7 @@ async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
     session.reset()
     context.chat_data[mode].pop('last_message', None)
+    context.chat_data[mode].pop('seg_message', None)
     context.chat_data[mode].pop('drafts', None)
     await update.message.reply_text('🧹 Chat history has been reset.')
 
@@ -61,8 +62,7 @@ async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.edit_text(content[:4096], reply_markup=markup)
         else:
             print(f'[e] {e}')
-            await message.edit_text('❌ Error orrurred, please try again later.')
-            await reset_chat(update, context)
+            await message.edit_text(f'❌ Error orrurred: {e}. /reset')
 
 
 async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -77,62 +77,69 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     mode, session = get_session(update, context)
+    input_text = update.message.text
+    input_text = input_text.replace(f'@{context.bot.username}', '').strip()
+
+    # handle long message (for claude 100k model)
+    seg_message = context.chat_data[mode].get('seg_message')
+    if seg_message is None:
+        if input_text.startswith('~seg'):
+            input_text = input_text.replace('~seg', '').strip()
+            context.chat_data[mode]['seg_message'] = input_text
+            return
+    else:
+        if input_text.startswith('~seg'):
+            input_text = seg_message
+            context.chat_data[mode].pop('seg_message', None)
+        else:
+            context.chat_data[mode]['seg_message'] = f'{seg_message}{input_text}'
+            return
+
     message = await update.message.reply_text('.')
     context.chat_data[mode]['last_message'] = message.message_id
 
-    try:
-        input_text = update.message.text
-        # remove bot name from text with @
-        input_text = input_text.replace(f'@{context.bot.username}', '')
+    if mode == 'Claude':
+        cutoff = session.cutoff
+        prev_response = ''
+        for response in session.send_message_stream(input_text):
+            if abs(len(response) - len(prev_response)) < cutoff:
+                continue
+            prev_response = response
+            await message.edit_text(response)
 
-        if mode == 'Claude':
-            cutoff = session.cutoff
-            prev_response = ''
-            for response in session.send_message_stream(input_text):
-                if abs(len(response) - len(prev_response)) < cutoff:
-                    continue
-                prev_response = response
+        _response = sub(
+            r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', response)
+        try:
+            await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
+        except Exception as e:
+            if str(e).startswith('Message is not modified'):
+                await message.edit_text(f'{_response}\\.', parse_mode=ParseMode.MARKDOWN_V2)
+            elif str(e).startswith("Can't parse entities"):
                 await message.edit_text(response)
+            elif str(e).startswith('Message is too long'):
+                await message.edit_text(response[:4096])
+            else:
+                print(f'[e] {e}')
+                await message.edit_text(f'❌ Error orrurred: {e}. /reset')
 
-            _response = sub(
-                r'[\_\*\[\]\(\)\~\>\#\+\-\=\|\{\}\.\!]', lambda x: f'\\{x.group(0)}', response)
-            try:
-                await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
-            except Exception as e:
-                if str(e).startswith('Message is not modified'):
-                    await message.edit_text(f'{_response}\\.', parse_mode=ParseMode.MARKDOWN_V2)
-                elif str(e).startswith("Can't parse entities"):
-                    await message.edit_text(response)
-                elif str(e).startswith('Message is too long'):
-                    await message.edit_text(response[:4096])
-                else:
-                    print(f'[e] {e}')
-                    await message.edit_text('❌ Error orrurred, please try again later.')
-                    await reset_chat(update, context)
+    else:  # Bard
+        response = session.client.ask(input_text)
+        # get source links
+        sources = ''
+        if response['factualityQueries']:
+            links = set(
+                item[2][0] for item in response['factualityQueries'][0] if item[2][0] != '')
+            sources = '\n\nSources - Learn More\n' + \
+                '\n'.join([f'{i+1}. {val}' for i, val in enumerate(links)])
 
-        else:  # Bard
-            response = session.client.ask(input_text)
-            # get source links
-            sources = ''
-            if response['factualityQueries']:
-                links = set(
-                    item[2][0] for item in response['factualityQueries'][0] if item[2][0] != '')
-                sources = '\n\nSources - Learn More\n' + \
-                    '\n'.join([f'{i+1}. {val}' for i, val in enumerate(links)])
-
-            # Buttons
-            search_url = f"https://www.google.com/search?q={quote(response['textQuery'][0]) if response['textQuery'] != '' else quote(input_text)}"
-            markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data=f'{message.message_id}'),
-                                            InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
-            context.chat_data['Bard']['drafts'] = {
-                'message': message, 'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
-            # get response
-            await bard_response(update, context)
-
-    except Exception as e:
-        print(f'[e] {e}')
-        await message.edit_text('❌ Error orrurred, please try again later.')
-        await reset_chat(update, context)
+        # Buttons
+        search_url = f"https://www.google.com/search?q={quote(response['textQuery'][0]) if response['textQuery'] != '' else quote(input_text)}"
+        markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='📝 View other drafts', callback_data=f'{message.message_id}'),
+                                        InlineKeyboardButton(text='🔍 Google it', url=search_url)]])
+        context.chat_data['Bard']['drafts'] = {
+            'message': message, 'markup': markup, 'sources': sources, 'choices': response['choices'], 'index': 0}
+        # get response
+        await bard_response(update, context)
 
 
 async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -259,6 +266,7 @@ async def send_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'[e] {context.error}')
+    await update.message.reply_text(f'❌ Error orrurred: {context.error}. /reset')
 
 
 async def post_init(application: Application):
