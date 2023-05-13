@@ -66,30 +66,32 @@ async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.chat.type != 'private':
-        if update.message.reply_to_message:
-            if update.message.reply_to_message.from_user.username != context.bot.username:
-                return
-        elif update.message.entities is not None:
-            if not compile(f'@{context.bot.username}').search(update.message.text):
-                return
+    if update.message.chat.type == 'private':
+        input_text = update.message.text
+    else:
+        if update.message.reply_to_message and update.message.reply_to_message.from_user.username == context.bot.username:
+            input_text = update.message.text
+        elif update.message.entities is not None and compile(f'@{context.bot.username}').search(update.message.text):
+            input_text = update.message.text.replace(
+                f'@{context.bot.username}', '').strip()
         else:
             return
 
     mode, session = get_session(update, context)
-    input_text = update.message.text
-    input_text = input_text.replace(f'@{context.bot.username}', '').strip()
-
     # handle long message (for claude 100k model)
     seg_message = context.chat_data[mode].get('seg_message')
     if seg_message is None:
         if input_text.startswith('~seg'):
-            input_text = input_text.replace('~seg', '').strip()
-            context.chat_data[mode]['seg_message'] = input_text
-            return
+            input_text = '~seg'.join(input_text.split('~seg')[1:]).strip()
+            if input_text.endswith('~seg'):
+                input_text = '~seg'.join(input_text.split('~seg')[:-1]).strip()
+            else:
+                context.chat_data[mode]['seg_message'] = input_text
+                return
     else:
-        if input_text.startswith('~seg'):
-            input_text = seg_message
+        if input_text.endswith('~seg'):
+            input_text = '~seg'.join(input_text.split('~seg')[:-1]).strip()
+            input_text = f'{seg_message}{input_text}'
             context.chat_data[mode].pop('seg_message', None)
         else:
             context.chat_data[mode]['seg_message'] = f'{seg_message}{input_text}'
