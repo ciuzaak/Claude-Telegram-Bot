@@ -12,20 +12,22 @@ If you only have access to one of the models, you can still continue to use this
 
 ## Features
 
-- Support of [official Claude API](https://console.anthropic.com/account/keys) and [reverse engineered Bard API](https://github.com/acheong08/Bard) *(command: `/mode` to switch between them)*
-- Claude's streaming output *(command: `/cutoff` to adjust the frequency of streaming, defaults to 50)*
-- Modify [Claude's model (defaults to v1.3) and temperature (defaults to 1)](https://console.anthropic.com/docs/api/reference) *(commands: `/model` and `/temp`)*
-- Show reference links and Google search keywords from Bard's answers *(button: `🔍 Google it`)*
-- Switch between different drafts provided by Bard's answers *(button: `📝 View other drafts`)*
+- Support of [official Claude API](https://console.anthropic.com/account/keys) and [reverse engineered Bard API](https://github.com/acheong08/Bard)
+- Streaming output (**Claude only**)
+- Modify model's version and temperature (**Claude only**)
+- Show reference links and Google search keywords (**Bard only**)
+- Switch between different drafts (**Bard Only**)
 - Support of partial Markdown
-- Private chat, group chat, independent chat session, ~~invitation mode~~
+- Private chat, group chat, independent chat session
 
 |                                                                     Claude                                                                      |                                                             Bard                                                              |
 | :---------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
 |                                       ✅ Non-English <br> ✅ Streaming output <br> ❌ Access to the Internet                                       |                              ❌ Non-English <br> ❌ Streaming output <br> ✅ Access to the Internet                              |
 | <img src="https://user-images.githubusercontent.com/41275670/234178910-422cc3cd-b1bf-4c06-bc51-7c75c0b71b35.gif" alt="demo_claude" width="288"> | <img src="https://user-images.githubusercontent.com/41275670/234179231-ed955dec-a75c-432f-9ec1-44c419998ffd.gif" width="288"> |
 
-## Usage
+## Getting Started
+
+### Deployment
 
 1. Clone this repository.
 
@@ -36,13 +38,13 @@ If you only have access to one of the models, you can still continue to use this
 
 3. Start the bot by:
 
-    - Docker (*with docker engine and docker-compose pre-installed*):
+    - **Docker** (with docker engine and docker-compose pre-installed):
 
         ```bash
-        docker-compose up --build
+        docker-compose up
         ```
 
-    - Scripts (*with python >= 3.8 and python3-venv pre-installed*):
+    - **Scripts** (with python >= 3.8 and python3-venv pre-installed):
 
         ```bash
         # create the virtual environment
@@ -51,6 +53,49 @@ If you only have access to one of the models, you can still continue to use this
         # start the bot
         bash scripts/run.sh
         ```
+
+### Usage
+
+#### Commands
+
+- `/id`: get your chat identifier
+- `/start`: start the bot and get help message
+- `/help`: get help message
+- `/reset`: reset the chat history
+- `/settings`: show Claude & Bard settings
+- `/mode`: switch between Claude and Bard
+- `/model NAME`: change model (**Claude only**)
+  - **Options:**
+            claude-v1,
+            claude-v1-100k,
+            claude-instant-v1,
+            claude-instant-v1-100k,
+            claude-v1.3,
+            claude-v1.3-100k,
+            claude-v1.2,
+            claude-v1.0,
+            claude-instant-v1.1,
+            claude-instant-v1.1-100k,
+            claude-instant-v1.0
+- `/temp VALUE`: set temperature (**Claude only**)
+  - **Range:** float in [0, 1]
+  - **Impact:** amount of randomness injected into the response
+  - **Suggestion:** temp closer to 0 for analytical / multiple choice, and temp closer to 1 for creative and generative tasks
+- `/cutoff VALUE`: adjust cutoff (**Claude only**)
+  - **Range:** int > 0
+  - **Impact:**: smaller cutoff indicates higher frequency of streaming output
+  - **Suggestion:** 50 for private chat, 150 for group chat
+
+#### Others
+
+- `~seg`: send messages in segments, suitable for 100k models, example below:
+    1. Send ~seg first
+    2. Paste a long text and send (or send a series of text in segments)
+    3. Input your questions and send
+    4. Send ~seg again
+    5. Bot will respond and you can continue the conversation
+- `📝 View other drafts`: click to see other drafts (**Bard Only**)
+- `🔍 Google it`: click to view the search results (**Bard Only**)
 
 ## Acknowledgements
 
