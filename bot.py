@@ -24,7 +24,7 @@ def get_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
     session.reset()
-    context.chat_data[mode].pop('last_message', None)
+    context.chat_data[mode].pop('last_msg_id', None)
     context.chat_data[mode].pop('seg_message', None)
     context.chat_data[mode].pop('drafts', None)
     await update.message.reply_text('🧹 Chat history has been reset.')
@@ -32,8 +32,8 @@ async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Google bard: view other drafts
 async def view_other_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    last_message = context.chat_data['Bard'].get('last_message')
-    if last_message is not None and update.callback_query.data == f'{last_message}':
+    last_msg_id = context.chat_data['Bard'].get('last_msg_id')
+    if last_msg_id is not None and update.callback_query.data == f'{last_msg_id}':
         # increase choice index
         context.chat_data['Bard']['drafts']['index'] = (
             context.chat_data['Bard']['drafts']['index'] + 1) % len(context.chat_data['Bard']['drafts']['choices'])
@@ -91,14 +91,14 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         if input_text.endswith('~seg'):
             input_text = '~seg'.join(input_text.split('~seg')[:-1]).strip()
-            input_text = f'{seg_message}{input_text}'
+            input_text = f'{seg_message}\n\n{input_text}'
             context.chat_data[mode].pop('seg_message', None)
         else:
-            context.chat_data[mode]['seg_message'] = f'{seg_message}{input_text}'
+            context.chat_data[mode]['seg_message'] = f'{seg_message}\n\n{input_text}'
             return
 
     message = await update.message.reply_text('.')
-    context.chat_data[mode]['last_message'] = message.message_id
+    context.chat_data[mode]['last_msg_id'] = message.message_id
 
     if mode == 'Claude':
         cutoff = session.cutoff
@@ -187,10 +187,10 @@ async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f'{emoji} Mode has been switched to <b>{final_mode}</b>.',
                                     parse_mode=ParseMode.HTML)
 
-    last_message = context.chat_data[final_mode].get('last_message')
-    if last_message is not None:
+    last_msg_id = context.chat_data[final_mode].get('last_msg_id')
+    if last_msg_id is not None:
         await update.message.reply_text(f"☝️ <b>{final_mode}</b>'s last answer. /reset",
-                                        reply_to_message_id=last_message, parse_mode=ParseMode.HTML)
+                                        reply_to_message_id=last_msg_id, parse_mode=ParseMode.HTML)
 
 
 async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
