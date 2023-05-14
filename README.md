@@ -31,12 +31,21 @@ If you only have access to one of the models, you can still continue to use this
 
 1. Clone this repository.
 
-2. Fill in `config/config.yml` with reference to `config/config.example.yml`.
+2. Configure the bot in the following two ways:
+   1. Create `config/config.yml` and fill in the information with reference to `config/config.example.yml`.
+   2. Set environment variables:
+
+      ```bash
+      export BOT_TOKEN="your bot token"
+      export USER_IDS="user_id1,user_id2,..."
+      export CLAUDE_API="your claude api" # ignore it if you don't want to use claude
+      export BARD_API="your bard api" # ignore it if you don't want to use bard
+      ```
 
     - [How to obtain telegram bot token](https://core.telegram.org/bots/tutorial#obtain-your-bot-token)
     - [How to obtain telegram user id](https://bigone.zendesk.com/hc/en-us/articles/360008014894-How-to-get-the-Telegram-user-ID-)
 
-3. Start the bot by:
+3. Start the bot in the following two ways:
 
     - **Docker** (with docker engine and docker-compose pre-installed):
 
