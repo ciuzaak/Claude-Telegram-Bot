@@ -32,8 +32,8 @@ If you only have access to one of the models, you can still continue to use this
 1. Clone this repository.
 
 2. Configure the bot in the following two ways:
-   1. Create `config/config.yml` and fill in the information with reference to `config/config.example.yml`.
-   2. Set environment variables:
+   1. **Create `config/config.yml`** and fill in the information with reference to `config/config.example.yml`.
+   2. or **Set environment variables:**
 
       ```bash
       export BOT_TOKEN="your bot token"
@@ -46,14 +46,13 @@ If you only have access to one of the models, you can still continue to use this
     - [How to obtain telegram user id](https://bigone.zendesk.com/hc/en-us/articles/360008014894-How-to-get-the-Telegram-user-ID-)
 
 3. Start the bot in the following two ways:
-
-    - **Docker** (with docker engine and docker-compose pre-installed):
+    1. **Docker** (with docker engine and docker-compose pre-installed):
 
         ```bash
         docker-compose up
         ```
 
-    - **Scripts** (with python >= 3.8 and python3-venv pre-installed):
+    2. or **Scripts** (with python >= 3.8 and python3-venv pre-installed):
 
         ```bash
         # create the virtual environment
