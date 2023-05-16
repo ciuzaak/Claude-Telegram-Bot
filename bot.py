@@ -81,16 +81,16 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # handle long message (for claude 100k model)
     seg_message = context.chat_data[mode].get('seg_message')
     if seg_message is None:
-        if input_text.startswith('~seg'):
-            input_text = '~seg'.join(input_text.split('~seg')[1:]).strip()
-            if input_text.endswith('~seg'):
-                input_text = '~seg'.join(input_text.split('~seg')[:-1]).strip()
+        if input_text.startswith('/seg'):
+            input_text = '/seg'.join(input_text.split('/seg')[1:]).strip()
+            if input_text.endswith('/seg'):
+                input_text = '/seg'.join(input_text.split('/seg')[:-1]).strip()
             else:
                 context.chat_data[mode]['seg_message'] = input_text
                 return
     else:
-        if input_text.endswith('~seg'):
-            input_text = '~seg'.join(input_text.split('~seg')[:-1]).strip()
+        if input_text.endswith('/seg'):
+            input_text = '/seg'.join(input_text.split('/seg')[:-1]).strip()
             input_text = f'{seg_message}\n\n{input_text}'
             context.chat_data[mode].pop('seg_message', None)
         else:
@@ -254,6 +254,7 @@ async def start_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'Commands:',
         '• /id to get your chat identifier',
         '• /reset to reset the chat history',
+        '• /seg to send message in segments',
         '• /mode to switch between Claude & Bard',
         '• /settings to show Claude & Bard settings',
     ]
@@ -274,6 +275,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand('/reset', 'Reset the chat history'),
+        BotCommand('/seg', 'Send message in segments'),
         BotCommand('/mode', 'Switch between Claude & Bard'),
         BotCommand('/settings', 'Show Claude & Bard settings'),
         BotCommand('/help', 'Get help message'),
@@ -286,7 +288,7 @@ def run_bot():
         bot_token).post_init(post_init).build()
 
     user_filter = filters.Chat(chat_id=user_ids)
-    message_filter = filters.TEXT & ~filters.COMMAND
+    msg_filter = filters.TEXT
 
     handler_list = [
         CommandHandler('id', send_id),
@@ -298,7 +300,7 @@ def run_bot():
         CommandHandler('model', change_model, user_filter),
         CommandHandler('temp', change_temperature, user_filter),
         CommandHandler('cutoff', change_cutoff, user_filter),
-        MessageHandler(message_filter & user_filter, recv_msg),
+        MessageHandler(user_filter & msg_filter, recv_msg),
         CallbackQueryHandler(view_other_drafts),
     ]
     for handler in handler_list:

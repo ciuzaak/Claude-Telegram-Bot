@@ -93,15 +93,15 @@ If you only have access to one of the models, you can still continue to use this
   - **Range:** int > 0
   - **Impact:**: smaller cutoff indicates higher frequency of streaming output
   - **Suggestion:** 50 for private chat, 150 for group chat
+- `/seg`: send messages in segments, suitable for Claude's 100k models, example below:
+    1. Send `/seg` first
+    2. Paste a long text and send (or send a series of text in segments)
+    3. Input your other questions and send
+    4. Send `/seg` again
+    5. Bot will respond and you can continue the conversation
 
 #### Others
 
-- `~seg`: send messages in segments, suitable for 100k models, example below:
-    1. Send ~seg first
-    2. Paste a long text and send (or send a series of text in segments)
-    3. Input your questions and send
-    4. Send ~seg again
-    5. Bot will respond and you can continue the conversation
 - `📝 View other drafts`: click to see other drafts (**Bard Only**)
 - `🔍 Google it`: click to view the search results (**Bard Only**)
 
