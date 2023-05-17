@@ -91,12 +91,15 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         if input_text.endswith('/seg'):
             input_text = '/seg'.join(input_text.split('/seg')[:-1]).strip()
-            input_text = f'{seg_message}\n\n{input_text}'
+            input_text = f'{seg_message}\n\n{input_text}'.strip()
             context.chat_data[mode].pop('seg_message', None)
         else:
             context.chat_data[mode]['seg_message'] = f'{seg_message}\n\n{input_text}'
             return
 
+    if input_text == '':
+        await update.message.reply_text('❌ Empty message.')
+        return
     message = await update.message.reply_text('.')
     context.chat_data[mode]['last_msg_id'] = message.message_id
 
