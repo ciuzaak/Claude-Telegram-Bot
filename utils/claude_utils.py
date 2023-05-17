@@ -6,7 +6,7 @@ from config import claude_api
 class Claude:
     def __init__(self):
         self.model = 'claude-v1.3'
-        self.temperature = 1.
+        self.temperature = 0.7
         self.cutoff = 50
         self.client = Client(claude_api)
         self.prompt = ''
