@@ -1,4 +1,4 @@
-from re import compile, sub
+from re import sub
 from urllib.parse import quote
 
 from telegram import (BotCommand, InlineKeyboardButton, InlineKeyboardMarkup,
@@ -25,6 +25,7 @@ async def reset_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
     session.reset()
     context.chat_data[mode].pop('last_msg_id', None)
+    context.chat_data[mode].pop('last_input', None)
     context.chat_data[mode].pop('seg_message', None)
     context.chat_data[mode].pop('drafts', None)
     await update.message.reply_text('🧹 Chat history has been reset.')
@@ -66,41 +67,47 @@ async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.chat.type == 'private':
-        input_text = update.message.text
-    else:
+    input_text = update.message.text
+    if update.message.chat.type != 'private':
         if update.message.reply_to_message and update.message.reply_to_message.from_user.username == context.bot.username:
-            input_text = update.message.text
-        elif update.message.entities is not None and compile(f'@{context.bot.username}').search(update.message.text):
-            input_text = update.message.text.replace(
-                f'@{context.bot.username}', '').strip()
+            pass
+        elif update.message.entities is not None and input_text.startswith(f'@{context.bot.username}'):
+            input_text = input_text.lstrip(f'@{context.bot.username}').lstrip()
         else:
             return
-
     mode, session = get_session(update, context)
+
     # handle long message (for claude 100k model)
     seg_message = context.chat_data[mode].get('seg_message')
     if seg_message is None:
         if input_text.startswith('/seg'):
-            input_text = '/seg'.join(input_text.split('/seg')[1:]).strip()
+            input_text = input_text.lstrip('/seg').lstrip()
             if input_text.endswith('/seg'):
-                input_text = '/seg'.join(input_text.split('/seg')[:-1]).strip()
+                input_text = input_text.rstrip('/seg').rstrip()
             else:
                 context.chat_data[mode]['seg_message'] = input_text
                 return
     else:
         if input_text.endswith('/seg'):
-            input_text = '/seg'.join(input_text.split('/seg')[:-1]).strip()
-            input_text = f'{seg_message}\n\n{input_text}'.strip()
+            input_text = f"{seg_message}\n\n{input_text.rstrip('/seg')}".strip()
             context.chat_data[mode].pop('seg_message', None)
         else:
             context.chat_data[mode]['seg_message'] = f'{seg_message}\n\n{input_text}'
             return
 
+    # regenerate the answer
+    if input_text.startswith('/retry'):
+        last_input = context.chat_data[mode].get('last_input')
+        if last_input is None:
+            return await update.message.reply_text('❌ Empty conversation.')
+        session.revert()
+        input_text = input_text.lstrip('/retry').lstrip()
+        input_text = input_text or last_input
+
     if input_text == '':
-        await update.message.reply_text('❌ Empty message.')
-        return
+        return await update.message.reply_text('❌ Empty message.')
     message = await update.message.reply_text('.')
+    context.chat_data[mode]['last_input'] = input_text
     context.chat_data[mode]['last_msg_id'] = message.message_id
 
     if mode == 'Claude':
@@ -128,7 +135,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await message.edit_text(f'❌ Error orrurred: {e}. /reset')
 
     else:  # Bard
-        response = session.client.ask(input_text)
+        response = session.send_message(input_text)
         # get source links
         sources = ''
         if response['factualityQueries']:
@@ -179,8 +186,7 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if single_mode:
-        await update.message.reply_text(f'❌ You cannot access the other mode.')
-        return
+        return await update.message.reply_text(f'❌ You cannot access the other mode.')
     mode, _ = get_session(update, context)
 
     final_mode, emoji = ('Bard', '🟠') if mode == 'Claude' else ('Claude', '🟣')
@@ -200,16 +206,13 @@ async def change_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
 
     if mode == 'Bard':
-        await update.message.reply_text('❌ Invalid option for Google Bard.')
-        return
-
+        return await update.message.reply_text('❌ Invalid option for Google Bard.')
     if len(context.args) != 1:
-        await update.message.reply_text('❌ Please provide a model name.')
-        return
+        return await update.message.reply_text('❌ Please provide a model name.')
+
     model = context.args[0].strip()
     if not session.change_model(model):
-        await update.message.reply_text('❌ Invalid model name.')
-        return
+        return await update.message.reply_text('❌ Invalid model name.')
     await update.message.reply_text(f'🤖 Model has been switched to <b>{model}</b>.',
                                     parse_mode=ParseMode.HTML)
 
@@ -218,16 +221,13 @@ async def change_temperature(update: Update, context: ContextTypes.DEFAULT_TYPE)
     mode, session = get_session(update, context)
 
     if mode == 'Bard':
-        await update.message.reply_text('❌ Invalid option for Google Bard.')
-        return
-
+        return await update.message.reply_text('❌ Invalid option for Google Bard.')
     if len(context.args) != 1:
-        await update.message.reply_text('❌ Please provide a temperature value.')
-        return
+        return await update.message.reply_text('❌ Please provide a temperature value.')
+
     temperature = context.args[0].strip()
     if not session.change_temperature(temperature):
-        await update.message.reply_text('❌ Invalid temperature value.')
-        return
+        return await update.message.reply_text('❌ Invalid temperature value.')
     await update.message.reply_text(f'🌡️ Temperature has been set to <b>{temperature}</b>.',
                                     parse_mode=ParseMode.HTML)
 
@@ -236,16 +236,13 @@ async def change_cutoff(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode, session = get_session(update, context)
 
     if mode == 'Bard':
-        await update.message.reply_text('❌ Invalid option for Google Bard.')
-        return
-
+        return await update.message.reply_text('❌ Invalid option for Google Bard.')
     if len(context.args) != 1:
-        await update.message.reply_text('❌ Please provide a cutoff value.')
-        return
+        return await update.message.reply_text('❌ Please provide a cutoff value.')
+
     cutoff = context.args[0].strip()
     if not session.change_cutoff(cutoff):
-        await update.message.reply_text('❌ Invalid cutoff value.')
-        return
+        return await update.message.reply_text('❌ Invalid cutoff value.')
     await update.message.reply_text(f'✂️ Cutoff has been set to <b>{cutoff}</b>.',
                                     parse_mode=ParseMode.HTML)
 
@@ -257,6 +254,7 @@ async def start_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'Commands:',
         '• /id to get your chat identifier',
         '• /reset to reset the chat history',
+        '• /retry to regenerate the answer',
         '• /seg to send message in segments',
         '• /mode to switch between Claude & Bard',
         '• /settings to show Claude & Bard settings',
@@ -278,6 +276,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand('/reset', 'Reset the chat history'),
+        BotCommand('/retry', 'Regenerate the answer'),
         BotCommand('/seg', 'Send message in segments'),
         BotCommand('/mode', 'Switch between Claude & Bard'),
         BotCommand('/settings', 'Show Claude & Bard settings'),

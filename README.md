@@ -99,6 +99,7 @@ If you only have access to one of the models, you can still continue to use this
     3. Input your other questions and send
     4. Send `/seg` again
     5. Bot will respond and you can continue the conversation
+- `/retry`: regenerate the answer. Use `/retry TEXT` to modify your last input.
 
 #### Others
 

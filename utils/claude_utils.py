@@ -14,6 +14,9 @@ class Claude:
     def reset(self):
         self.prompt = ''
 
+    def revert(self):
+        self.prompt = self.prompt[:self.prompt.rfind(HUMAN_PROMPT)]
+
     def change_model(self, model):
         valid_models = {
             'claude-v1',
