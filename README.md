@@ -13,12 +13,16 @@ If you only have access to one of the models, you can still continue to use this
 ## Features
 
 - Support of [official Claude API](https://console.anthropic.com/account/keys) and [reverse engineered Bard API](https://github.com/acheong08/Bard)
-- Streaming output (**Claude only**)
-- Modify model's version and temperature (**Claude only**)
-- Show reference links and Google search keywords (**Bard only**)
-- Switch between different drafts (**Bard Only**)
-- Support of partial Markdown
+- Support of partial Markdown formatting
+- Send extremely long inputs in segments
+- Resend the question and regenerate the answer
 - Private chat, group chat, independent chat session
+- **Claude only**:
+  - Streaming output
+  - Modify model's version (**including 100k**) and temperature
+- **Bard only**:
+  - Toogle between different draft responses
+  - View reference links and Google search keywords
 
 |                                                                     Claude                                                                      |                                                             Bard                                                              |
 | :---------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
@@ -27,7 +31,9 @@ If you only have access to one of the models, you can still continue to use this
 
 ## Getting Started
 
-### Deployment
+### [Deployment (Zeabur)](https://github.com/ciuzaak/Claude-Telegram-Bot/issues/10#issue-1717101083)
+
+### Deployment (Local)
 
 1. Clone this repository.
 
