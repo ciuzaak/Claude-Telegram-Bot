@@ -5,31 +5,31 @@ from config import claude_api
 
 class Claude:
     def __init__(self):
-        self.model = 'claude-v1.3'
+        self.model = "claude-v1.3"
         self.temperature = 0.7
         self.cutoff = 50
         self.client = Client(claude_api)
-        self.prompt = ''
+        self.prompt = ""
 
     def reset(self):
-        self.prompt = ''
+        self.prompt = ""
 
     def revert(self):
-        self.prompt = self.prompt[:self.prompt.rfind(HUMAN_PROMPT)]
+        self.prompt = self.prompt[: self.prompt.rfind(HUMAN_PROMPT)]
 
     def change_model(self, model):
         valid_models = {
-            'claude-v1',
-            'claude-v1-100k',
-            'claude-instant-v1',
-            'claude-instant-v1-100k',
-            'claude-v1.3',
-            'claude-v1.3-100k',
-            'claude-v1.2',
-            'claude-v1.0',
-            'claude-instant-v1.1',
-            'claude-instant-v1.1-100k',
-            'claude-instant-v1.0'
+            "claude-v1",
+            "claude-v1-100k",
+            "claude-instant-v1",
+            "claude-instant-v1-100k",
+            "claude-v1.3",
+            "claude-v1.3-100k",
+            "claude-v1.2",
+            "claude-v1.0",
+            "claude-instant-v1.1",
+            "claude-instant-v1.1-100k",
+            "claude-instant-v1.0",
         }
         if model in valid_models:
             self.model = model
@@ -57,7 +57,7 @@ class Claude:
         return False
 
     def send_message_stream(self, message):
-        self.prompt = f'{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}'
+        self.prompt = f"{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}"
         response = self.client.completion_stream(
             prompt=self.prompt,
             stop_sequences=[HUMAN_PROMPT],
@@ -65,8 +65,8 @@ class Claude:
             model=self.model,
             temperature=self.temperature,
             stream=True,
-            disable_checks=True
+            disable_checks=True,
         )
         for data in response:
-            yield data['completion']
+            yield data["completion"]
         self.prompt = f"{self.prompt}{data['completion']}"
