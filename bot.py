@@ -1,7 +1,13 @@
 from re import sub
 from urllib.parse import quote
 
-from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    BotCommand,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    InputMediaPhoto,
+    Update,
+)
 from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
@@ -203,6 +209,11 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         # get response
         await bard_response(update, context)
+        # get images
+        images = response["images"]
+        if len(images) != 0:
+            media = [InputMediaPhoto(image[: image.rfind("=")]) for image in images]
+            await update.message.reply_media_group(media)
 
 
 async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -240,9 +251,7 @@ async def change_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await update.message.reply_text(f"❌ You cannot access the other mode.")
     mode, _ = get_session(update, context)
 
-    final_mode, emoji = (
-        ("Bard", "🟠") if mode == "Claude" else ("Claude", "🟣")
-    )
+    final_mode, emoji = ("Bard", "🟠") if mode == "Claude" else ("Claude", "🟣")
     context.chat_data["mode"] = final_mode
     if final_mode not in context.chat_data:
         context.chat_data[final_mode] = {"session": Session(final_mode)}
