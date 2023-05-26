@@ -69,21 +69,17 @@ async def bard_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     try:
         await message.edit_text(
-            f"{_content}{_sources}",
+            f"{_content[: 4096 - len(_sources)]}{_sources}",
             reply_markup=markup,
             parse_mode=ParseMode.MARKDOWN_V2,
         )
     except Exception as e:
         if str(e).startswith("Message is not modified"):
-            await message.edit_text(
-                f"{_content}{_sources}\\.",
-                reply_markup=markup,
-                parse_mode=ParseMode.MARKDOWN_V2,
-            )
+            pass
         elif str(e).startswith("Can't parse entities"):
-            await message.edit_text(f"{content}{sources}", reply_markup=markup)
-        elif str(e).startswith("Message is too long"):
-            await message.edit_text(content[:4096], reply_markup=markup)
+            await message.edit_text(
+                f"{content[: 4095 - len(sources)]}.{sources}", reply_markup=markup
+            )
         else:
             print(f"[e] {e}")
             await message.edit_text(f"❌ Error orrurred: {e}. /reset")
@@ -140,10 +136,10 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data[mode]["last_msg_id"] = message.message_id
 
     if mode == "Claude":
-        cutoff = session.cutoff
         prev_response = ""
         for response in session.send_message_stream(input_text):
-            if abs(len(response) - len(prev_response)) < cutoff:
+            response = response[:4096]
+            if abs(len(response) - len(prev_response)) < session.cutoff:
                 continue
             prev_response = response
             await message.edit_text(response)
@@ -154,16 +150,12 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response,
         )
         try:
-            await message.edit_text(_response, parse_mode=ParseMode.MARKDOWN_V2)
+            await message.edit_text(_response[:4096], parse_mode=ParseMode.MARKDOWN_V2)
         except Exception as e:
             if str(e).startswith("Message is not modified"):
-                await message.edit_text(
-                    f"{_response}\\.", parse_mode=ParseMode.MARKDOWN_V2
-                )
+                pass
             elif str(e).startswith("Can't parse entities"):
-                await message.edit_text(response)
-            elif str(e).startswith("Message is too long"):
-                await message.edit_text(response[:4096])
+                await message.edit_text(f"{response[:4095]}.")
             else:
                 print(f"[e] {e}")
                 await message.edit_text(f"❌ Error orrurred: {e}. /reset")
@@ -210,9 +202,11 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # get response
         await bard_response(update, context)
         # get images
-        images = response["images"]
-        if len(images) != 0:
-            media = [InputMediaPhoto(image[: image.rfind("=")]) for image in images]
+        if len(response["images"]) != 0:
+            media = [
+                InputMediaPhoto(image[: image.rfind("=")])
+                for image in response["images"]
+            ]
             await update.message.reply_media_group(media)
 
 
