@@ -22,7 +22,8 @@ If you only have access to one of the models, you can still continue to use this
   - Modify model's version (**including 100k**) and temperature
 - **Bard only**:
   - Toogle between different draft responses
-  - View reference links and Google search keywords
+  - View reference links and Google Search keywords
+  - View images from Google Search
 
 |                                                                     Claude                                                                      |                                                             Bard                                                              |
 | :---------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
