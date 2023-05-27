@@ -204,8 +204,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # get images
         if len(response["images"]) != 0:
             media = [
-                InputMediaPhoto(image[: image.rfind("=")])
-                for image in response["images"]
+                InputMediaPhoto(f"{image[:-11]}w0-h0-s") for image in response["images"]
             ]
             await update.message.reply_media_group(media)
 
