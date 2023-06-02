@@ -137,7 +137,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if mode == "Claude":
         prev_response = ""
-        for response in session.send_message_stream(input_text):
+        async for response in session.send_message_stream(input_text):
             response = response[:4096]
             if abs(len(response) - len(prev_response)) < session.cutoff:
                 continue
@@ -161,7 +161,7 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await message.edit_text(f"❌ Error orrurred: {e}. /reset")
 
     else:  # Bard
-        response = session.send_message(input_text)
+        response = await session.send_message(input_text)
         # get source links
         sources = ""
         if response["factualityQueries"]:
@@ -361,7 +361,13 @@ async def post_init(application: Application):
 
 def run_bot():
     print(f"[+] bot started, calling loop!")
-    application = ApplicationBuilder().token(bot_token).post_init(post_init).build()
+    application = (
+        ApplicationBuilder()
+        .token(bot_token)
+        .post_init(post_init)
+        .concurrent_updates(True)
+        .build()
+    )
 
     user_filter = filters.Chat(chat_id=user_ids)
     msg_filter = filters.TEXT

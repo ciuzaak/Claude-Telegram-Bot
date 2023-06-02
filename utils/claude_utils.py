@@ -56,9 +56,9 @@ class Claude:
             return True
         return False
 
-    def send_message_stream(self, message):
+    async def send_message_stream(self, message):
         self.prompt = f"{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}"
-        response = self.client.completion_stream(
+        response = await self.client.acompletion_stream(
             prompt=self.prompt,
             stop_sequences=[HUMAN_PROMPT],
             max_tokens_to_sample=9216,
@@ -67,6 +67,6 @@ class Claude:
             stream=True,
             disable_checks=True,
         )
-        for data in response:
+        async for data in response:
             yield data["completion"]
         self.prompt = f"{self.prompt}{data['completion']}"
