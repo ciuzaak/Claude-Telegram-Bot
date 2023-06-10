@@ -203,13 +203,21 @@ async def recv_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await bard_response(update, context)
         # get images
         if len(response["images"]) != 0:
+            captions = [
+                caption[1:-1]
+                for caption in response["content"].splitlines()
+                if caption.startswith("[Image")
+            ]
             try:
-                images = [InputMediaPhoto(image) for image in response["images"]]
+                images = [
+                    InputMediaPhoto(media=image, caption=captions[i])
+                    for i, image in enumerate(response["images"])
+                ]
                 await update.message.reply_media_group(images)
             except:
                 images = "\n".join(
                     [
-                        f"<a href='{image}'>Image {i+1}</a>"
+                        f"<a href='{image}'>{captions[i]}</a>"
                         for i, image in enumerate(response["images"])
                     ]
                 )
