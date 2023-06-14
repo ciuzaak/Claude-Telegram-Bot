@@ -242,7 +242,7 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• [/model NAME] to change model",
             "• [/temp VALUE] to set temperature",
             "• [/cutoff VALUE] to adjust cutoff",
-            "<a href='https://console.anthropic.com/docs/api/reference'>Reference</a>",
+            "<a href='https://docs.anthropic.com/claude/reference/complete_post'>Reference</a>",
         ]
     else:  # Bard
         extras = [

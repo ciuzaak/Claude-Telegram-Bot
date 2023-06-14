@@ -5,7 +5,7 @@ from config import claude_api
 
 class Claude:
     def __init__(self):
-        self.model = "claude-v1.3"
+        self.model = "claude-1.3-100k"
         self.temperature = 0.7
         self.cutoff = 50
         self.client = Client(claude_api)
@@ -19,17 +19,17 @@ class Claude:
 
     def change_model(self, model):
         valid_models = {
-            "claude-v1",
-            "claude-v1-100k",
-            "claude-instant-v1",
-            "claude-instant-v1-100k",
-            "claude-v1.3",
-            "claude-v1.3-100k",
-            "claude-v1.2",
-            "claude-v1.0",
-            "claude-instant-v1.1",
-            "claude-instant-v1.1-100k",
-            "claude-instant-v1.0",
+            "claude-1",
+            "claude-1-100k",
+            "claude-instant-1",
+            "claude-instant-1-100k",
+            "claude-1.3",
+            "claude-1.3-100k",
+            "claude-1.2",
+            "claude-1.0",
+            "claude-instant-1.1",
+            "claude-instant-1.1-100k",
+            "claude-instant-1.0",
         }
         if model in valid_models:
             self.model = model
