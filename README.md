@@ -53,10 +53,10 @@ If you only have access to one of the models, you can still continue to use this
     - [How to obtain telegram user id](https://bigone.zendesk.com/hc/en-us/articles/360008014894-How-to-get-the-Telegram-user-ID-)
 
 3. Start the bot in the following two ways:
-    1. **Docker** (with docker engine and docker-compose pre-installed):
+    1. **Docker** (with docker engine pre-installed):
 
         ```bash
-        docker-compose up
+        docker compose up
         ```
 
     2. or **Scripts** (with python >= 3.8 and python3-venv pre-installed):
@@ -81,17 +81,17 @@ If you only have access to one of the models, you can still continue to use this
 - `/mode`: switch between Claude and Bard
 - `/model NAME`: change model (**Claude only**)
   - **Options:**
-            claude-v1,
-            claude-v1-100k,
-            claude-instant-v1,
-            claude-instant-v1-100k,
-            claude-v1.3,
-            claude-v1.3-100k,
-            claude-v1.2,
-            claude-v1.0,
-            claude-instant-v1.1,
-            claude-instant-v1.1-100k,
-            claude-instant-v1.0
+            claude-1,
+            claude-1-100k,
+            claude-instant-1,
+            claude-instant-1-100k,
+            claude-1.3,
+            claude-1.3-100k,
+            claude-1.2,
+            claude-1.0,
+            claude-instant-1.1,
+            claude-instant-1.1-100k,
+            claude-instant-1.0
 - `/temp VALUE`: set temperature (**Claude only**)
   - **Range:** float in [0, 1]
   - **Impact:** amount of randomness injected into the response
