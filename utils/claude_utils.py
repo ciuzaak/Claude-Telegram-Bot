@@ -1,4 +1,4 @@
-from anthropic import AI_PROMPT, HUMAN_PROMPT, Client
+from anthropic import AI_PROMPT, HUMAN_PROMPT, AsyncAnthropic
 
 from config import claude_api
 
@@ -8,7 +8,7 @@ class Claude:
         self.model = "claude-1.3-100k"
         self.temperature = 0.7
         self.cutoff = 50
-        self.client = Client(claude_api)
+        self.client = AsyncAnthropic(api_key=claude_api)
         self.prompt = ""
 
     def reset(self):
@@ -58,15 +58,16 @@ class Claude:
 
     async def send_message_stream(self, message):
         self.prompt = f"{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}"
-        response = await self.client.acompletion_stream(
+        response = await self.client.completions.create(
             prompt=self.prompt,
             stop_sequences=[HUMAN_PROMPT],
             max_tokens_to_sample=9216,
             model=self.model,
             temperature=self.temperature,
             stream=True,
-            disable_checks=True,
         )
+        answer = ""
         async for data in response:
-            yield data["completion"]
-        self.prompt = f"{self.prompt}{data['completion']}"
+            answer = f"{answer}{data.completion}"
+            yield answer
+        self.prompt = f"{self.prompt}{answer}"
