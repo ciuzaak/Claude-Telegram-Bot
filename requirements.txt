@@ -1,4 +1,4 @@
 pyyaml
 python-telegram-bot
-anthropic==0.3.1
+anthropic==0.3.2
 GoogleBard==1.4.0
