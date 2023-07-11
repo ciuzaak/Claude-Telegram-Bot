@@ -5,7 +5,7 @@ from config import claude_api
 
 class Claude:
     def __init__(self):
-        self.model = "claude-1.3-100k"
+        self.model = "claude-2"
         self.temperature = 0.7
         self.cutoff = 50
         self.client = AsyncAnthropic(api_key=claude_api)
@@ -18,19 +18,7 @@ class Claude:
         self.prompt = self.prompt[: self.prompt.rfind(HUMAN_PROMPT)]
 
     def change_model(self, model):
-        valid_models = {
-            "claude-1",
-            "claude-1-100k",
-            "claude-instant-1",
-            "claude-instant-1-100k",
-            "claude-1.3",
-            "claude-1.3-100k",
-            "claude-1.2",
-            "claude-1.0",
-            "claude-instant-1.1",
-            "claude-instant-1.1-100k",
-            "claude-instant-1.0",
-        }
+        valid_models = {"claude-2", "claude-instant-1"}
         if model in valid_models:
             self.model = model
             return True
@@ -60,11 +48,10 @@ class Claude:
         self.prompt = f"{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}"
         response = await self.client.completions.create(
             prompt=self.prompt,
-            stop_sequences=[HUMAN_PROMPT],
-            max_tokens_to_sample=9216,
             model=self.model,
             temperature=self.temperature,
             stream=True,
+            max_tokens_to_sample=100000,
         )
         answer = ""
         async for data in response:
