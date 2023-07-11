@@ -19,7 +19,7 @@ If you only have access to one of the models, you can still continue to use this
 - Private chat, group chat, independent chat session
 - **Claude only**:
   - Streaming output
-  - Modify model's version (**including 100k**) and temperature
+  - Modify model's version and temperature
 - **Bard only**:
   - Toogle between different draft responses
   - View reference links and Google Search keywords
@@ -81,17 +81,8 @@ If you only have access to one of the models, you can still continue to use this
 - `/mode`: switch between Claude and Bard
 - `/model NAME`: change model (**Claude only**)
   - **Options:**
-            claude-1,
-            claude-1-100k,
-            claude-instant-1,
-            claude-instant-1-100k,
-            claude-1.3,
-            claude-1.3-100k,
-            claude-1.2,
-            claude-1.0,
-            claude-instant-1.1,
-            claude-instant-1.1-100k,
-            claude-instant-1.0
+            claude-2,
+            claude-instant-1
 - `/temp VALUE`: set temperature (**Claude only**)
   - **Range:** float in [0, 1]
   - **Impact:** amount of randomness injected into the response
@@ -100,7 +91,7 @@ If you only have access to one of the models, you can still continue to use this
   - **Range:** int > 0
   - **Impact:**: smaller cutoff indicates higher frequency of streaming output
   - **Suggestion:** 50 for private chat, 150 for group chat
-- `/seg`: send messages in segments, suitable for Claude's 100k models, example below:
+- `/seg`: send messages in segments, example below:
     1. Send `/seg` first
     2. Paste a long text and send (or send a series of text in segments)
     3. Input your other questions and send
