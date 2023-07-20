@@ -4,4 +4,4 @@ telegram:
 claude:
   api: CLAUDE_API_KEY # leave it blank if you don't want to use claude
 bard:
-  api: BARD_API_KEY # leave it blank if you don't want to use bard
+  api: BARD_API_KEY (__Secure-1PSID, __Secure-1PSIDTS) # leave it blank if you don't want to use bard

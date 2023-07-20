@@ -2,17 +2,13 @@
 
 This is a Telegram bot that intereacts with **Anthropic Claude** and **Google Bard**.
 
-Before using this bot, you need to apply for access credentials for Claude and Bard respectively:
-
-- Join waitlists: [Claude](https://www.anthropic.com/earlyaccess/) | [Bard](https://bard.google.com/signup)
-
-- Obtain APIs: [Claude (official)](https://console.anthropic.com/account/keys) | [Bard (reverse engineered)](https://github.com/acheong08/Bard)
+- Obtain APIs: [Claude (official)](https://console.anthropic.com/account/keys) | [Bard (reverse engineered)](https://github.com/acheong08/Bard#authentication)
 
 If you only have access to one of the models, you can still continue to use this bot. Some functions may be limited due to lack of authorization for the other model.
 
 ## Features
 
-- Support of [official Claude API](https://console.anthropic.com/account/keys) and [reverse engineered Bard API](https://github.com/acheong08/Bard)
+- Support of official Claude API and reverse engineered Bard API
 - Support of partial Markdown formatting
 - Send extremely long inputs in segments
 - Resend the question and regenerate the answer
@@ -27,7 +23,7 @@ If you only have access to one of the models, you can still continue to use this
 
 |                                                                     Claude                                                                      |                                                             Bard                                                              |
 | :---------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
-|                                       ✅ Non-English <br> ✅ Streaming output <br> ❌ Access to the Internet                                       |                              ❌ Non-English <br> ❌ Streaming output <br> ✅ Access to the Internet                              |
+|                                                ✅ Streaming output <br> ❌ Access to the Internet                                                 |                                       ❌ Streaming output <br> ✅ Access to the Internet                                        |
 | <img src="https://user-images.githubusercontent.com/41275670/234178910-422cc3cd-b1bf-4c06-bc51-7c75c0b71b35.gif" alt="demo_claude" width="288"> | <img src="https://user-images.githubusercontent.com/41275670/234179231-ed955dec-a75c-432f-9ec1-44c419998ffd.gif" width="288"> |
 
 ## Getting Started
@@ -44,9 +40,9 @@ If you only have access to one of the models, you can still continue to use this
 
       ```bash
       export BOT_TOKEN="your bot token"
-      export USER_IDS="user_id1,user_id2,..."
+      export USER_IDS="user_id1, user_id2,..."
       export CLAUDE_API="your claude api" # ignore it if you don't want to use claude
-      export BARD_API="your bard api" # ignore it if you don't want to use bard
+      export BARD_API="__Secure-1PSID, __Secure-1PSIDTS" # ignore it if you don't want to use bard
       ```
 
     - [How to obtain telegram bot token](https://core.telegram.org/bots/tutorial#obtain-your-bot-token)
