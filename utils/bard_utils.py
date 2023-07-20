@@ -1,11 +1,11 @@
 from Bard import AsyncChatbot
 
-from config import bard_api
+from config import psid, psidts
 
 
 class Bard:
     def __init__(self):
-        self.client = AsyncChatbot(bard_api)
+        self.client = AsyncChatbot(psid, psidts)
         self.prev_conversation_id = ""
         self.prev_response_id = ""
         self.prev_choice_id = ""
