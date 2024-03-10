@@ -50,6 +50,7 @@ class Claude:
         async with self.client.messages.stream(
           max_tokens=100000,
           model=self.model,
+          temperature=self.temperature,
           messages=[
               {
                   "role": "user",
