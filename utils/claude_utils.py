@@ -48,7 +48,7 @@ class Claude:
         self.prompt = f"{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}"
         answer = ""
         async with self.client.messages.stream(
-          max_tokens=1024,
+          max_tokens=100000,
           model=self.model,
           messages=[
               {
