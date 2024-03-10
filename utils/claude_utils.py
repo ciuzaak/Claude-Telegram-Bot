@@ -5,7 +5,7 @@ from config import claude_api
 
 class Claude:
     def __init__(self):
-        self.model = "claude-2"
+        self.model = "claude-3-opus-20240229"
         self.temperature = 0.7
         self.cutoff = 50
         self.client = AsyncAnthropic(api_key=claude_api)
@@ -18,7 +18,7 @@ class Claude:
         self.prompt = self.prompt[: self.prompt.rfind(HUMAN_PROMPT)]
 
     def change_model(self, model):
-        valid_models = {"claude-2", "claude-instant-1"}
+        valid_models = {"claude-3-opus-20240229", "claude-3-sonett-20240229"}
         if model in valid_models:
             self.model = model
             return True
@@ -44,17 +44,23 @@ class Claude:
             return True
         return False
 
-    async def send_message_stream(self, message):
+    async def send_message_stream(self, message) -> None:
         self.prompt = f"{self.prompt}{HUMAN_PROMPT} {message}{AI_PROMPT}"
-        response = await self.client.completions.create(
-            prompt=self.prompt,
-            model=self.model,
-            temperature=self.temperature,
-            stream=True,
-            max_tokens_to_sample=100000,
-        )
         answer = ""
-        async for data in response:
-            answer = f"{answer}{data.completion}"
+        async with self.client.messages.stream(
+          max_tokens=4096,
+          model=self.model,
+          temperature=self.temperature,
+          messages=[
+              {
+                  "role": "user",
+                  "content": self.prompt,
+              }
+            ],
+        ) as stream:
+          async for text in stream.text_stream:
+            answer = f"{answer}{text}"
             yield answer
         self.prompt = f"{self.prompt}{answer}"
+        message = await stream.get_final_message()
+        print(message.model_dump_json(indent=2))

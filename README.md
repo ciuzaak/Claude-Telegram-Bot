@@ -77,8 +77,8 @@ If you only have access to one of the models, you can still continue to use this
 - `/mode`: switch between Claude and Bard
 - `/model NAME`: change model (**Claude only**)
   - **Options:**
-            claude-2,
-            claude-instant-1
+            claude-3-opus-20240229
+            claude-3-sonett-20240229
 - `/temp VALUE`: set temperature (**Claude only**)
   - **Range:** float in [0, 1]
   - **Impact:** amount of randomness injected into the response
